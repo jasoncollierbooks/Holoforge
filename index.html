@@ -1,0 +1,45 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOLO//FORGE — text to design</title><meta name="description" content="Type what you want. Get a 3D part, an engineer's inspection, and better versions. Runs in your browser.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 29 9v14L16 30 3 23V9z' fill='none' stroke='%2337e0ff' stroke-width='2.5'/></svg>">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<div id="bg"></div>
+<section id="start">
+ <div class="brand"><span class="hex">⬡</span> HOLO<b>//</b>FORGE</div>
+ <p class="tag">Type what you want. Get a 3D design, an engineer's inspection, and better versions.</p>
+ <div class="modes">
+  <button data-mode="object"><i>⚙</i><b>Physical part</b><small>brackets, gears, boxes, plates</small></button>
+  <button data-mode="bridge"><i>⟁</i><b>Bridges &amp; buildings</b><small>truss spans, frames</small></button>
+  <button data-mode="roof"><i>⌂</i><b>Roofs</b><small>gable roofs, rafters</small></button>
+  <button data-mode="assembly"><i>🔗</i><b>Assemblies</b><small>hinges, gear pairs, sliders</small></button>
+  <button data-mode="invent"><i>✦</i><b>Invent</b><small>describe an idea</small></button>
+  <button data-mode="code" class="soon"><i>&lt;/&gt;</i><b>Code</b><small>coming to the web version</small></button>
+ </div>
+ <p class="foot">Runs entirely in your browser · no account · works without AI</p>
+</section>
+<main id="lab" hidden>
+ <header><button id="home" title="Change mode">⬡ HOLO<b>//</b>FORGE</button><span id="modeName"></span><span class="sp"></span>
+  <button id="aiBtn" class="ghost">AI: off</button><button id="helpBtn" class="ghost">?</button></header>
+ <div id="prompt"><input id="q" autocomplete="off" placeholder="Describe a part… e.g. L bracket 40 mm legs, 3 mm thick, holds 5 kg"><button id="go">FORGE</button></div>
+ <div id="chips"></div>
+ <div id="stage"><canvas id="view"></canvas><div id="pins"></div>
+  <div id="hud"><div id="title">Pick an example above or type a part</div><div id="stats"></div></div>
+  <div id="tools"><button id="tInspect" class="on">🔍 Inspect</button><button id="tWire">◇ Wire</button><button id="tSpin">⟳ Spin</button><button id="tAnim" hidden>▶ Move</button><button id="tStl">⤓ STL</button></div>
+ </div>
+ <aside id="side">
+  <section><h3>Engineer inspection</h3><div id="issues" class="muted">Nothing built yet.</div></section>
+  <section><h3>Make it…</h3><div id="opts"></div></section>
+  <section><h3>Dimensions</h3><div id="params"></div></section>
+  <section><h3>Generations</h3><div id="tree" class="muted">Your design history appears here. Click any version to go back; new versions branch from it.</div></section>
+ </aside>
+ <footer id="assist"><button id="mic" title="Talk">🎙</button><input id="aq" placeholder="Lab Assistant — ask anything: “what's a good wall for PETG?”, “convert 3/4 in to mm”, “make a gear then stronger then export”"><button id="ask">Ask</button><label class="spk"><input type="checkbox" id="speak" checked> 🔊</label>
+  <div id="answer"></div></footer>
+</main>
+<dialog id="aiDlg"><h3>Optional AI (bring your own key)</h3><p>HOLO//FORGE works fully without AI. If you want, paste your own xAI or OpenAI key. It is stored <b>only in this browser</b> (localStorage) and sent only to the provider you pick.</p>
+ <label>Provider <select id="aiProv"><option value="xai">xAI (api.x.ai)</option><option value="openai">OpenAI</option></select></label>
+ <label>API key <input id="aiKey" type="password" placeholder="sk-… / xai-…"></label><p class="muted">Used for: answering questions the built-in knowledge can't. Some providers block browser calls; if so you'll see an error and nothing else breaks.</p>
+ <div class="row"><button id="aiSave">Save</button><button id="aiClear" class="ghost">Remove key</button><button id="aiClose" class="ghost">Close</button></div></dialog>
+<dialog id="helpDlg"><h3>How to use</h3><ol><li>Type a part (or tap an example chip) and press <b>FORGE</b>.</li><li>Red/amber pins on the model are weak points — read them in <b>Engineer inspection</b>.</li><li>Tap <b>Lighter / Stronger / Cheaper</b> to make a new generation. Every version is kept in <b>Generations</b>; click one to go back and branch.</li><li>Drag sliders in <b>Dimensions</b> to tweak.</li><li><b>⤓ STL</b> downloads a file for 3D printing.</li><li>Ask the <b>Lab Assistant</b> anything, by typing or 🎙.</li></ol><p class="muted">Results are quick hand-calc estimates, not a licensed engineer's sign-off.</p><div class="row"><button id="helpClose">Got it</button></div></dialog>
+<script type="module" src="app.js"></script>
+</body></html>

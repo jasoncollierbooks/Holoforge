@@ -3,7 +3,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {STLExporter} from 'three/addons/exporters/STLExporter.js';
 import * as L from './parts.js';
 const $=s=>document.querySelector(s);
-const EX={object:["mounting_plate","l_bracket","project_box","spur_gear","flange","shelf_bracket","wall_hook","v_pulley","spacer","shaft","nut","washer"],bridge:["truss_bridge"],roof:["gable_roof"],invent:["phone_stand","wall_hook","project_box"]};
+const EX={object:["mounting_plate","l_bracket","project_box","spur_gear","compression_spring","bolt","flange","shelf_bracket","timing_pulley","bearing_housing","tslot_extrusion","pipe_elbow","pull_handle","knob","butt_hinge","pcb_enclosure","cable_clip","z_bracket","u_bracket","mending_plate","wall_hook","hook_rail","v_pulley","shaft_collar","flanged_bushing","pipe_tee","pipe_coupling","pipe_clip","pipe_saddle","rect_frame","extrusion_corner","heat_set_boss","standoff","spacer","shaft","nut","washer"],bridge:["truss_bridge","beam_bridge","building_frame"],roof:["gable_roof","shed_roof","truss_roof"],invent:["phone_stand","bike_rack","planter_box","wall_hook","project_box"]};
 let mode="object",cur=null,tree=[],curId=null,KB=[],mesh=null,asm=null,anim=false,spin=false,clock=new THREE.Clock();
 // ---------- start screen ----------
 document.querySelectorAll(".modes button").forEach(b=>b.onclick=()=>{if(b.classList.contains("soon")){say("Code mode is coming to the web version. Try a physical part for now.");}enter(b.dataset.mode=="code"?"object":b.dataset.mode);});
@@ -75,29 +75,20 @@ function exportSTL(){if(!mesh)return say("Build something first.");mesh.updateMa
  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"model/stl"}));a.download=(cur?cur.name+"_G"+cur.id:asm)+".stl";a.click();say("STL downloaded. Units are millimetres.");}
 $("#go").onclick=()=>forge();$("#q").onkeydown=e=>{if(e.key=="Enter")forge();};
 // ---------- Lab Assistant ----------
-fetch("knowledge.json").then(r=>r.json()).then(k=>KB=k);
-const STOP=new Set("a an the is are what whats what's how do does i to of for in on and or my me it should can you be with which why when".split(" "));
-const toks=s=>s.toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w&&!STOP.has(w));
-function kbSearch(q){const qt=toks(q);let best=null;for(const e of KB){const hay=toks(e.t+" "+e.g+" "+e.t),body=new Set(toks(e.a));let s=0;for(const w of qt){if(hay.includes(w))s+=3;else if(hay.some(h=>h.startsWith(w.slice(0,5))&&w.length>4))s+=2;else if(body.has(w))s+=1;}if(!best||s>best.s)best={s,e};}return best&&best.s>=3?best.e:null;}
-const UNITS={mm:1,cm:10,m:1000,in:25.4,inch:25.4,inches:25.4,ft:304.8,feet:304.8,foot:304.8,kg:1,lb:0.45359,lbs:0.45359,pound:0.45359,pounds:0.45359,g:0.001,n:1,kn:1000,lbf:4.448,mpa:1,psi:0.006895,ksi:6.895,nm:1,"ft-lb":1.3558};
-const DIM={mm:"L",cm:"L",m:"L",in:"L",inch:"L",inches:"L",ft:"L",feet:"L",foot:"L",kg:"M",lb:"M",lbs:"M",pound:"M",pounds:"M",g:"M",n:"F",kn:"F",lbf:"F",mpa:"P",psi:"P",ksi:"P",nm:"T","ft-lb":"T"};
-function calc(q){const t=q.toLowerCase();
- let m=t.match(/(\d+(?:\.\d+)?(?:\s+\d+\/\d+|\/\d+)?)\s*(mm|cm|m|in|inch|inches|ft|feet|foot|kg|lbs?|pounds?|g|kn|n|lbf|mpa|psi|ksi|nm|ft-lb)\s*(?:to|in|into|=)\s*(mm|cm|m|in|inch|inches|ft|feet|kg|lbs?|pounds?|g|kn|n|lbf|mpa|psi|ksi|nm|ft-lb)\b/);
- if(m&&DIM[m[2]]==DIM[m[3]]){const v=m[1].split(/\s+/).reduce((s,x)=>s+(x.includes("/")?x.split("/")[0]/x.split("/")[1]:+x),0);const r=v*UNITS[m[2]]/UNITS[m[3]];if(m[2]=="in"&&m[3]=="in")return null;return`${m[1]} ${m[2]} = ${+r.toPrecision(5)} ${m[3]}`;}
- if(/^(?:what is |calc |calculate |=)?\s*[\d\s+\-*/().^%]+$/.test(t)&&/\d\s*[+\-*/^]/.test(t)){try{const e=t.replace(/[^\d+\-*/().^%\s]/g,"").replace(/\^/g,"**");return`${e.trim()} = ${+Function('"use strict";return('+e+')')().toPrecision(8)}`;}catch{}}
- m=t.match(/(\d+(?:\.\d+)?)\s*kg.*?(?:force|newtons?|in n)/);if(m)return`${m[1]} kg weighs ${(m[1]*9.81).toFixed(1)} N (×9.81).`;
- m=t.match(/tap drill.*?m(\d+)|m(\d+).*?tap drill/);if(m){const d=+(m[1]||m[2]),pitch={2:.4,2.5:.45,3:.5,4:.7,5:.8,6:1,8:1.25,10:1.5,12:1.75,16:2,20:2.5,24:3}[d];if(pitch)return`M${d} coarse: pitch ${pitch} mm, tap drill ${(d-pitch).toFixed(1)} mm, clearance hole ${(d*1.1).toFixed(1)} mm.`;}
- m=t.match(/beam|cantilever/)&&t.match(/(\d+(?:\.\d+)?)\s*(?:n|kg).*?(\d+(?:\.\d+)?)\s*mm\s*long.*?(\d+(?:\.\d+)?)\s*(?:mm)?\s*x\s*(\d+(?:\.\d+)?)/);
- if(m){let F=+m[1];if(/kg/.test(t))F*=9.81;const s=6*F*m[2]/(m[3]*m[4]*m[4]);return`Cantilever bending stress ≈ 6FL/(bh²) = ${s.toFixed(1)} MPa (F ${F.toFixed(0)} N, L ${m[2]} mm, b ${m[3]}, h ${m[4]}).`;}
- m=t.match(/gear.*?(\d+)\s*teeth.*?module\s*(\d+(?:\.\d+)?)/);if(m)return`Pitch Ø = teeth × module = ${m[1]*m[2]} mm; outside Ø ${(+m[1]+2)*m[2]} mm.`;
- return null;}
+fetch("kb/core.json").then(r=>r.json()).then(k=>KB=k);
+let shardsP=null,TABLES=null;const loadShards=()=>shardsP||(shardsP=fetch("kb/index.json").then(r=>r.json()).then(ix=>Promise.all(Object.keys(ix.shards).filter(s=>s!="core").map(s=>fetch("kb/"+s+".json").then(r=>r.json()).then(k=>KB.push(...k))))));
+setTimeout(()=>loadShards(),3000);
+async function table(q){TABLES=TABLES||await (await fetch("kb/tables.json")).json();const w=q.toLowerCase().split(/\W+/).filter(x=>x.length>2&&x!="table"&&x!="show"&&x!="list");const t=TABLES.find(t=>w.some(x=>t.name.toLowerCase().includes(x.slice(0,5))));
+ if(!t)return"Tables: "+TABLES.map(t=>t.name).join(", ")+". Say ‘show table bolts’.";const a=$("#answer");return{html:`<b>${t.name}</b> (${t.units})<table class="kt"><tr>${t.cols.map(c=>`<th>${c}</th>`).join("")}</tr>${t.rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</table>`,text:`Here is the ${t.name} table.`};}
+import {search as kbS,calc,toks} from './brain.js';
+function logMiss(q){try{const L=JSON.parse(localStorage.hf_unanswered||"[]");L.push({q,t:new Date().toISOString()});localStorage.hf_unanswered=JSON.stringify(L.slice(-200));}catch{}}
 async function aiAnswer(q){const k=aiKey();if(!k)return null;const prov=localStorage.hf_prov||"xai";const url=prov=="xai"?"https://api.x.ai/v1/chat/completions":"https://api.openai.com/v1/chat/completions";
  try{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+k},body:JSON.stringify({model:prov=="xai"?"grok-3-mini":"gpt-4o-mini",messages:[{role:"system",content:"You are the Lab Assistant in a CAD app. Answer in 1-3 short sentences."},{role:"user",content:q}]})});
   const j=await r.json();return j.choices?.[0]?.message?.content||("AI error: "+(j.error?.message||r.status));}catch(e){return"AI call failed from the browser ("+e.message+"). The built-in assistant still works.";}}
 function say(text,quiet){const a=$("#answer");a.innerHTML="";a.append(document.createTextNode(text));if($("#speak").checked&&!quiet&&"speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g,""));u.rate=1.02;const v=speechSynthesis.getVoices().find(v=>/en(-|_)US/.test(v.lang)&&/male|david|guy|daniel/i.test(v.name));if(v)u.voice=v;speechSynthesis.speak(u);}}
 async function ask(q){q=(q||$("#aq").value).trim();if(!q)return;$("#aq").value="";
  const steps=q.split(/\s*(?:,?\s*then\s+|;\s*|\band then\b)\s*/i).filter(Boolean);const out=[];
- for(const s of steps){const r=await one(s);if(r)out.push(r);}if(out.length)say(out.join("\n"));}
+ for(const s of steps){const r=await one(s);if(r&&r.html){say(r.text);$("#answer").innerHTML=r.html;return;}if(r)out.push(r);}if(out.length)say(out.join("\n"));}
 async function one(s){const t=s.toLowerCase();
  if(/^(make|build|design|forge|create|draw)\b/.test(t)){const txt=s.replace(/^\w+\s+(me\s+)?(an?\s+)?/i,"");const n=L.detect(txt);if(!n)return`I can't build “${txt}” from the library yet.`;if(mode=="assembly")enter(L.PARTS[n].mode||"object");$("#q").value=txt;forge(txt);return`Built a ${n.replace(/_/g," ")}. Safety ${cur.safety.toFixed(1)} of 3, ${cur.issues.filter(i=>i.sev!="info").length} issue(s).`;}
  const og=t.match(/^(?:make it |go |do )?(lighter|stronger|cheaper)\b/);if(og){if(!cur)return"Build something first.";const op=L.options(cur.name,cur.p,cur.mat,cur.F).find(o=>o.name.toLowerCase()==og[1]);addNode({name:cur.name,p:op.p,mat:op.mat||cur.mat,F:cur.F,label:op.name,log:op.log},cur.id);return`${op.name} version G${cur.id}: safety ${cur.safety.toFixed(1)}.`;}
@@ -105,10 +96,13 @@ async function one(s){const t=s.toLowerCase();
  if(/^(inspect|check|what'?s wrong|weak)/.test(t)){if(!cur)return"Nothing to inspect yet.";const I=cur.issues.filter(i=>i.sev!="info");return I.length?I.map((i,k)=>`${k+1}. ${i.note}`).join(" "):"No weak points at this load.";}
  if(/^(go )?back\b|^undo\b/.test(t)){if(cur&&cur.parent!=null){select(cur.parent);return"Went back to G"+cur.id+".";}return"Nothing to go back to.";}
  if(/\b(help|how do i use|what can you do)\b/.test(t))return"Type a part and press Forge. Red pins are weak points. Lighter, Stronger and Cheaper make new versions you can branch. Ask me engineering questions, unit conversions, or chain commands with ‘then’.";
+ if(/\b(table|tables)\b/.test(t))return await table(s);
  const c=calc(s);if(c)return c;
- const e=kbSearch(s);if(e)return`${e.a}\n— ${e.d}: ${e.t}${e.s?" ("+e.s+")":""}`;
+ await loadShards();
+ const R=kbS(KB,s,3),e=R[0];if(e&&e.conf>=0.3)return`${e.e.a}\n— ${e.e.d}: ${e.e.t}${e.e.s?" ("+e.e.s+")":""}`;
  const ai=await aiAnswer(s);if(ai)return"AI: "+ai;
- return"I don't know that one yet. Try asking about materials, wall thickness, bolts, gears, roofs, bridges, printing, or say ‘convert 2 in to mm’.";}
+ logMiss(s);if(R.length)return`Not sure I have exactly that. Closest topics: ${R.map(r=>"“"+r.e.t+"”").join(", ")}. Ask about one of those, or rephrase.`;
+ return"I couldn't find that. Try materials, bolts, wire, beams, roofs, HVAC, plumbing, patents, or ‘convert 2 in to mm’.";}
 $("#ask").onclick=()=>ask();$("#aq").onkeydown=e=>{if(e.key=="Enter")ask();};
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 $("#mic").onclick=()=>{if(!SR)return say("Voice input needs Chrome, Edge or Safari. You can still type.");const r=new SR();r.lang="en-US";r.interimResults=false;$("#mic").classList.add("rec");

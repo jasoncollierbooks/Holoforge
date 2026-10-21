@@ -1,0 +1,80 @@
+{
+ "v": 1,
+ "aliases": [
+  {
+   "q": "what parts can it make",
+   "k": "How to use HOLO//FORGE|Which parts exist"
+  },
+  {
+   "q": "what can you build",
+   "k": "How to use HOLO//FORGE|Which parts exist"
+  },
+  {
+   "q": "is it safe to change an outlet",
+   "k": "General|Electrical safety"
+  },
+  {
+   "q": "how long will my battery last",
+   "k": "Electrical|Battery runtime"
+  },
+  {
+   "q": "battery last",
+   "k": "Electrical|Battery runtime"
+  },
+  {
+   "q": "heat loss through a wall",
+   "k": "Thermal|R-value and U-value"
+  },
+  {
+   "q": "how do i set the load",
+   "k": "How to use HOLO//FORGE|Setting the load"
+  },
+  {
+   "q": "can i put aluminum against steel",
+   "k": "General|Galvanic corrosion"
+  },
+  {
+   "q": "how much insulation in the attic",
+   "k": "Architecture & building codes|Insulation"
+  },
+  {
+   "q": "which way should i print a bracket",
+   "k": "Manufacturing|Layer orientation"
+  },
+  {
+   "q": "how often change furnace filter",
+   "k": "HVAC|Filter MERV ratings"
+  },
+  {
+   "q": "modulus of elasticity steel",
+   "k": "Materials|Mild steel properties"
+  },
+  {
+   "q": "show it at a trade show before patent",
+   "k": "Patents|Public disclosure grace period"
+  }
+ ],
+ "entries": [
+  {
+   "d": "Electrical & electronics",
+   "t": "Replacing an outlet or switch safely",
+   "g": "change outlet, replace receptacle, swap switch, outlet safe, diy electrical, electrical safety",
+   "a": "Turn the breaker off, then prove the outlet is dead with a non-contact tester and a plug-in tester or meter (test the tester on a live outlet first). Replace like for like: a 15 A outlet on a 15 A circuit, 15 or 20 A outlets on a 20 A circuit. Kitchens, bathrooms, garages, outdoors, basements and near sinks need GFCI protection. Stop and call an electrician if you find aluminum wire, scorch marks, no ground where one is needed, or more wires than you expected. Some areas require a permit even for this.",
+   "s": "NEC 210.8 / 406 (typical US); check local rules"
+  },
+  {
+   "d": "Thermal",
+   "t": "Heat loss through a wall or window",
+   "g": "heat loss, r-value heat loss, wall heat loss, window heat loss, btu loss, u value calculation",
+   "a": "Heat flow Q = A \u00d7 \u0394T / R. In US units Q is BTU/h when A is in ft\u00b2, \u0394T in \u00b0F and R is the R-value (R-13 wall, R-38 attic, about R-3 for a double-pane window). Example: 100 ft\u00b2 of R-13 wall with 40 \u00b0F inside-outside difference loses about 308 BTU/h. In metric Q = U \u00d7 A \u00d7 \u0394T in watts, with U = 1/R(SI) and R(SI) = R(US) / 5.68.",
+   "s": "ASHRAE Fundamentals (standard conduction formula)"
+  },
+  {
+   "d": "Electrical & electronics",
+   "t": "Is 12 V or 24 V dangerous?",
+   "g": "12v dangerous, low voltage shock, 24v safe, car battery shock, extra low voltage",
+   "a": "Shock risk from 12 V or 24 V on dry skin is very low; up to about 50 V AC or 120 V DC counts as extra-low voltage. The real danger is current: car and lithium batteries can push hundreds of amps into a short, which melts wires, burns skin through rings and watches, and starts fires. Fuse every positive wire close to the battery, size wire for the current, and take off metal jewelry.",
+   "s": "IEC 61140 ELV limits (typical)"
+  }
+ ]
+}

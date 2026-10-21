@@ -1,0 +1,8 @@
+[{"req":"7 inch long range drone frame 300 mm, 1.2 kg","part":"drone_frame","chk":"p.size==300&&F>11","fu":[["thinner","p.arm_t<o.arm_t"],["make it lighter","true"]]},
+{"req":"hexacopter frame 550 mm","part":"drone_frame","chk":"p.size==550","fu":[["stronger","true"]]},
+{"req":"i need a robot arm link 300 mm, lifts 500 g, aluminum","part":"robot_arm_link","chk":"p.length==300&&mat.startsWith('Alum')&&F>4","fu":[["half as long","p.length==150"],["now in petg","mat=='PETG'"]]},
+{"req":"rover wheel 150 mm across 40 mm wide","part":"wheel","chk":"p.diameter==150&&p.width==40","fu":[["8 spokes","p.spokes==8"]]},
+{"req":"mount for a nema 23","part":"motor_mount","chk":"p.size==56.4","fu":[["in steel","mat=='Mild steel'"]]},
+{"req":"drive wheel for my robot car 65 mm","part":"wheel","chk":"p.diameter==65","fu":[["bigger","p.diameter>o.diameter"]]},
+{"req":"pinion gear 12 teeth module 0.5 for a servo","part":"spur_gear","chk":"p.teeth==12&&p.module==0.5","fu":[]},
+{"req":"motor bracket for a stepper 6 mm thick","part":"motor_mount","chk":"p.thickness==6","fu":[]}]

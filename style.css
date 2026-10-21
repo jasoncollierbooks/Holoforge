@@ -34,3 +34,9 @@ dialog{background:#06182a;color:#d9f6ff;border:1px solid var(--c);border-radius:
 @media(max-width:820px){#tools{top:auto;bottom:10px}#hud{right:10px}header{flex-wrap:wrap}#lab{grid-template-columns:1fr;height:auto}#stage{height:55vh}#side,#assist,header,#prompt,#chips{grid-column:1;grid-row:auto}}
 
 #answer{max-height:240px}.kt{border-collapse:collapse;font-size:12px;margin-top:4px}.kt td,.kt th{border:1px solid var(--l);padding:2px 6px}.kt th{color:var(--c)}
+.why{margin:6px 0 4px 18px;padding:0}.why li{margin:2px 0}.src{opacity:.7;font-size:12px;margin-top:4px}
+.teach{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}.tb,.alt{background:rgba(55,224,255,.12);border:1px solid var(--l);border-radius:8px;padding:3px 9px;font-size:13px}.tb:hover,.alt:hover{border-color:var(--c)}
+#teachDlg textarea,#teachDlg input:not([type=file]){width:100%;background:#071a2c;color:inherit;border:1px solid var(--l);border-radius:8px;padding:7px;font:inherit}
+.learned{max-height:140px;overflow:auto;font-size:13px}.learned div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid rgba(55,224,255,.12);padding:3px 0}.learned button{background:none;border:0;color:var(--r)}
+#teachDlg h4{margin:12px 0 4px;font-weight:400;opacity:.8}
+dialog button.ghost{background:rgba(55,224,255,.08);color:#d9f6ff;border:1px solid var(--l)}

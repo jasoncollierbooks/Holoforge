@@ -132,8 +132,8 @@ export function parse(name,text){const P=PARTS[name];let t=text.toLowerCase().re
  const mm=tc.match(/\bm(\d+)\b/);if(mm&&"d"in p)p.d=+mm[1];
  const dims=tc.match(new RegExp(NUM+"\\s*(?:mm)?\\s*x\\s*"+NUM+"(?:\\s*(?:mm)?\\s*x\\s*"+NUM+")?"));
  if(dims){const ks=["length","width","height"].filter(k=>k in p);[dims[1],dims[2],dims[3]].forEach((v,i)=>{if(v&&ks[i])p[ks[i]]=+v;});notes.push("dims "+dims[0]);}
- for(const k in P.P){if(dims&&["length","width","height"].includes(k)&&P.P[k])continue;for(const al of P.P[k][4]){const r1=new RegExp(NUM+"\\s*(?:mm|m|kg|°|deg|degrees?)?\\s*(?:\\w+\\s)?"+al+"\\b"),r2=new RegExp("\\b"+al+"\\s*(?:of|is|=|:|at)?\\s*"+NUM);
-   const m=tc.match(r2)||tc.match(r1);if(m){p[k]=+m[1];notes.push(`${k}=${m[1]}`);break;}}}
+ for(const k in P.P){if(dims&&["length","width","height"].includes(k)&&P.P[k])continue;for(const al of P.P[k][4]){const r1=new RegExp(NUM+"\\s*(?:mm|m|kg|°|deg|degrees?)?\\s*(?:[a-z]\\w*\\s)?"+al+"\\b"),r2=new RegExp("\\b"+al+"\\s*(?:of|is|=|:|at)?\\s*"+NUM);
+   const m=tc.match(r1)||tc.match(r2);if(m){p[k]=+m[1];notes.push(`${k}=${m[1]}`);break;}}}
  if("angle"in p||"pitch"in p){const m=t.match(/(\d+(?:\.\d+)?)\s*(?:°|deg)/);if(m)p["angle"in p?"angle":"pitch"]=+m[1];}
  for(const k in P.P)p[k]=Math.min(Math.max(p[k],P.P[k][1]),P.P[k][2]);
  let load=null;const lk=t.match(/(\d+(?:\.\d+)?)\s*kg/),ln=t.match(/(\d+(?:\.\d+)?)\s*n\b/),lb=t.match(/(\d+(?:\.\d+)?)\s*(?:lb|lbs|pounds?)\b/);
@@ -144,7 +144,7 @@ export function volume(g){const a=g.attributes.position.array;let v=0;for(let i=
 // ---- inspection & generations (port of inspect_evolve.options) ----
 export function inspect(name,p,mat,F){return PARTS[name].check(p,MATS[mat]||MATS.PLA,F);}
 export function score(I){return Math.max(0.3,3-0.7*I.filter(i=>i.sev=="high").length-0.25*I.filter(i=>i.sev=="med").length);}
-const STR=["thickness","wall","rafter","member","height","module","diameter","od","leg"];
+const STR=["thickness","arm_t","wall","rafter","member","height","module","diameter","od","leg"];
 function clampP(name,p){const P=PARTS[name].P;for(const k in P)p[k]=+Math.min(Math.max(p[k],P[k][1]),P[k][2]).toFixed(2);return p;}
 export function evolve(name,p,mat,F){p={...p};const log=[];for(const i of inspect(name,p,mat,F))for(const k in i.fix)if(k in p&&i.fix[k]!==p[k]){log.push(`${k}: ${p[k]} → ${i.fix[k]}`);p[k]=i.fix[k];}clampP(name,p);return{p,log};}
 export function options(name,p0,mat,F){const base=evolve(name,p0,mat,F),bad=q=>inspect(name,q,mat,F).filter(i=>i.sev!="info").length,out=[];
@@ -294,3 +294,44 @@ part("planter_box",{cat:"Invent",icon:"🪴",re:/\b(planter|flower box|raised be
  P:{length:[600,100,3000,"Length",["long","length"]],width:[200,60,1500,"Width",["wide","width"]],height:[200,50,800,"Height",["tall","high","height"]],wall:[3,1.5,40,"Wall",["wall","walls"]],drains:[3,0,10,"Drain holes",[]]},
  build:p=>PARTS.project_box.build({length:p.length,width:p.width,height:p.height,wall:p.wall,standoffs:0,vents:0}),
  check:p=>{const o=[],q=0.5*1000*9.81*(p.height/1000)**2*p.length,s=6*q*p.height/3/(p.length*p.wall**2);if(s>15)o.push(iss("high","Soil pressure will bulge the long walls.",[0,-p.width/2,p.height/2],{wall:+(p.wall*Math.sqrt(s/12)).toFixed(1)}));if(!p.drains)o.push(iss("med","No drain holes: roots rot.",[0,0,0],{drains:3}));return o;}});
+// ===== realistic weight for big structures: steel members are hollow/I sections, decks & floors are concrete =====
+// Returns {kg, cost, note}. Without this the solid preview boxes would be weighed as solid steel (way too heavy).
+const CONC={rho:2400,cost:0.13};const hollowA=m=>{const t=Math.max(8,m/16);return m*m-(m-2*t)**2;};
+const STRUCT={
+ truss_bridge:(p,M)=>{const S=p.span*1000,W=p.width*1000,H=p.height*1000,n=Math.round(p.panels),pl=S/n;
+  const side=S+(S-2*pl)+(n-1)*H+n*Math.hypot(pl,H),Lm=2*side+(n-1)*W;const steel=Lm*hollowA(p.member)*1e-9*M.rho;
+  const stringers=Math.ceil(W/1500)*S*9000*1e-9*M.rho; // ~W250 stringers, 9000 mm² each
+  const deck=S*W*200*1e-9*CONC.rho;return{kg:steel+stringers+deck,cost:(steel+stringers)*M.cost+deck*CONC.cost,
+  note:`steel ${(steel+stringers)/1000|0} t (hollow box members ${p.member} mm, ${Math.max(8,p.member/16).toFixed(0)} mm wall) + 200 mm concrete deck ${deck/1000|0} t`};},
+ beam_bridge:(p,M)=>{const S=p.span*1000,W=p.width*1000,d=p.depth,n=Math.round(p.girders);const A=(d*0.04+8)*d*0.9+2*(d*0.35)*(d*0.05);
+  const steel=n*S*A*1e-9*M.rho,deck=S*W*200*1e-9*CONC.rho,abut=2*1000*(W+600)*1200*1e-9*CONC.rho;
+  return{kg:steel+deck+abut,cost:steel*M.cost+(deck+abut)*CONC.cost,note:`steel girders ${(steel/1000).toFixed(1)} t + concrete deck & abutments ${((deck+abut)/1000).toFixed(0)} t`};},
+ building_frame:(p,M)=>{const L=p.length*1000,W=p.width*1000,h=p.story_h*1000,c=p.column,nx=Math.ceil(p.length/8),ny=Math.ceil(p.width/8),s=p.stories;
+  const col=s*(nx+1)*(ny+1)*h*hollowA(c),bA=(c*1.2)*(c*0.6)-(c*1.2-2*Math.max(8,c/20))*(c*0.6-Math.max(8,c/20)); // I-ish beam area
+  const beams=s*((ny+1)*L+(nx+1)*W)*bA,steel=(col+beams)*1e-9*M.rho,slab=s*L*W*120*1e-9*CONC.rho;
+  return{kg:steel+slab,cost:steel*M.cost+slab*CONC.cost,note:`steel frame ${(steel/1000).toFixed(1)} t (hollow columns, I-beams) + 120 mm concrete floors ${(slab/1000).toFixed(0)} t`};}};
+export function massOf(name,p,mat,geo){const M=MATS[mat]||MATS.PLA;if(STRUCT[name])return STRUCT[name](p,M);const kg=volume(geo)*1e-9*M.rho;return{kg,cost:kg*M.cost,note:""};}
+// ===== robotics & drones =====
+part("drone_frame",{cat:"Robotics",icon:"✚",re:/\b(drone|quad(copter)?|hexa(copter)?|octo(copter)?|multirotor|fpv)( frame)?\b/,ex:"quadcopter frame 250 mm motor to motor, 4 mm carbon arms, 2306 motors, 800 g all-up",mat:"Nylon PA12",
+ P:{size:[250,100,1000,"Motor-to-motor mm",["motor to motor","wheelbase","size","frame"]],arm_w:[14,6,40,"Arm width",["arm width","wide"]],arm_t:[4,2,12,"Arm thickness",["arms","arm","thick"]],mount:[28,12,60,"Motor mount Ø",["mount","motor mount"]],plate:[90,40,300,"Center plate",["plate","center"]]},
+ build:p=>{const R=p.size/2,g=[box(p.plate,p.plate*0.8,p.arm_t,{z:p.arm_t/2}),box(p.plate*0.9,p.plate*0.7,2,{z:p.arm_t+28})];
+  for(const a of[PI/4,3*PI/4,5*PI/4,7*PI/4]){const geo=new T.BoxGeometry(R,p.arm_w,p.arm_t);geo.translate(R/2,0,p.arm_t/2);geo.rotateZ(a);g.push(geo);g.push(cyl(p.mount/2,p.arm_t+1,{rx:PI/2,x:R*Math.cos(a),y:R*Math.sin(a),z:(p.arm_t+1)/2}));
+   g.push(cyl(p.mount/2*0.9,12,{rx:PI/2,x:R*Math.cos(a),y:R*Math.sin(a),z:p.arm_t+7}));}for(const[x,y]of[[1,1],[1,-1],[-1,1],[-1,-1]])g.push(cyl(2,28,{rx:PI/2,x:x*p.plate*0.35,y:y*p.plate*0.3,z:p.arm_t+14}));return g;},
+ check:(p,m,F)=>{const o=[],L=p.size/2-p.plate*0.35,thrust=Math.max(F,8)*2/4; // each arm carries ~2× hover thrust at full throttle
+  const s=bendRect(thrust,L,p.arm_w,p.arm_t);if(m.y/s<1.5)o.push(iss("high",`Arm bending ${s.toFixed(0)} MPa at full thrust: arms will snap in a crash or punch-out.`,[p.size/2*0.7,p.size/2*0.7,0],{arm_t:+(p.arm_t*Math.sqrt(s*1.5/m.y)*1.05).toFixed(1)}));
+  const d=thrust*L**3/(3*m.E*p.arm_w*p.arm_t**3/12);if(d>L*0.01)o.push(iss("med",`Arm tip flexes ${d.toFixed(1)} mm: vibration/oscillation risk, PID tune will suffer.`,[p.size/2*0.7,0,0],{arm_t:+(p.arm_t*1.3).toFixed(1)}));
+  if(m.E<20000)o.push(iss("info","Real racing frames use 4–6 mm carbon fibre plate (E ≈ 50–70 GPa); printed nylon is fine for prototypes and small whoops.",[0,0,0]));return o;}});
+part("robot_arm_link",{cat:"Robotics",icon:"⟋",re:/\b(robot(ic)? arm|arm link|link arm|servo arm|robot link)\b/,ex:"robot arm link 150 mm between joints, 30 mm wide, 6 mm thick, lifts 500 g, PETG",mat:"PETG",
+ P:{length:[150,40,600,"Joint spacing",["between joints","long","length"]],width:[30,10,100,"Width",["wide","width"]],thickness:[6,2,30,"Thickness",["thick"]],bore:[8,2,30,"Joint bore",["bore","shaft"]]},
+ build:p=>{const s=new T.Shape();const L=p.length,r=p.width/2;s.absarc(0,0,r,PI/2,3*PI/2,false);s.lineTo(L,-r);s.absarc(L,0,r,-PI/2,PI/2,false);s.lineTo(0,r);hole(s,0,0,p.bore/2);hole(s,L,0,p.bore/2);if(L>4*p.width)hole(s,L/2,0,p.width*0.25);return[place(ext(s,p.thickness),{x:-L/2})];},
+ check:(p,m,F)=>{const o=[],s=bendRect(F,p.length,p.thickness,p.width);if(m.y/s<2)o.push(iss("high",`Link bending ${s.toFixed(1)} MPa at full reach.`,[0,0,0],{width:+(p.width*Math.sqrt(s*2/m.y)*1.05).toFixed(1)}));
+  const bear=F/(p.bore*p.thickness);if(bear>m.y/3)o.push(iss("med","Joint hole bearing stress high: add a bushing or thicker link.",[-p.length/2,0,0],{thickness:+(p.thickness*1.4).toFixed(1)}));
+  o.push(iss("info",`Joint torque needed ≈ ${(F*p.length/1000).toFixed(2)} N·m (${(F*p.length/1000/0.0981).toFixed(1)} kg·cm) plus the link's own weight; pick a servo with 2× that.`,[0,0,0]));return o;}});
+part("wheel",{cat:"Robotics",icon:"◎",re:/\b(robot )?wheel\b(?! ?(bearing|pulley))/,ex:"robot wheel 65 mm diameter, 25 mm wide, 5 mm D shaft",mat:"PLA",
+ P:{diameter:[65,20,400,"Diameter",["diameter","across"]],width:[25,5,120,"Width",["wide","width"]],bore:[5,2,30,"Shaft bore",["shaft","bore"]],spokes:[5,0,12,"Spokes",["spokes"]]},
+ build:p=>{const R=p.diameter/2,g=[ring(R,R-4,p.width),ring(p.bore/2+5,p.bore/2,p.width)];for(let i=0;i<p.spokes;i++){const a=i*2*PI/p.spokes,l=R-4-(p.bore/2+5);const b=new T.BoxGeometry(l,4,p.width*0.6);b.translate(p.bore/2+5+l/2,0,p.width*0.3);b.rotateZ(a);g.push(b);}if(!p.spokes)g.push(ring(R-3,p.bore/2+4,p.width*0.4));return g;},
+ check:(p,m,F)=>{const o=[];if(p.spokes&&p.spokes<3)o.push(iss("med","Fewer than 3 spokes: wheel wobbles.",[0,0,0],{spokes:5}));if(F/(p.width*8)>m.y/4)o.push(iss("high","Rim crushes under this load.",[p.diameter/2,0,0],{width:Math.round(p.width*1.5)}));return o;}});
+part("motor_mount",{cat:"Robotics",icon:"⊕",re:/\b(motor|stepper|nema ?17|nema ?23) (mount|bracket|plate)\b/,ex:"NEMA 17 motor mount 5 mm thick, PETG",mat:"PETG",
+ P:{size:[42.3,20,90,"Motor face",["face"]],thickness:[5,2,15,"Thickness",["thick"]],bolt:[31,10,80,"Bolt square",["bolt"]]},
+ build:p=>{const S=p.size+10,s=rrect(S,S,4);hole(s,0,0,11.5);for(const[x,y]of[[1,1],[1,-1],[-1,1],[-1,-1]])hole(s,x*p.bolt/2,y*p.bolt/2,1.7);return[ext(s,p.thickness),box(p.thickness,S,S*0.8,{x:-S/2+p.thickness/2,z:S*0.4}),box(S*0.6,p.thickness,S*0.6,{x:-S*0.2,y:S/2-p.thickness/2,z:S*0.3})];},
+ check:(p,m,F)=>p.thickness<4&&m.E<10000?[iss("med","Under 4 mm printed plate flexes and lets belts lose tension.",[0,0,0],{thickness:5})]:[]});

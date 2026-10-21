@@ -1,0 +1,133 @@
+{
+ "v": 1,
+ "entries": [
+  {
+   "d": "Electrical & electronics",
+   "t": "Replacing an outlet or switch safely",
+   "g": "change outlet, replace receptacle, swap switch, outlet safe, diy electrical, electrical safety",
+   "a": "Turn the breaker off, then prove the outlet is dead with a non-contact tester and a plug-in tester or meter (test the tester on a live outlet first). Replace like for like: a 15 A outlet on a 15 A circuit, 15 or 20 A outlets on a 20 A circuit. Kitchens, bathrooms, garages, outdoors, basements and near sinks need GFCI protection. Stop and call an electrician if you find aluminum wire, scorch marks, no ground where one is needed, or more wires than you expected. Some areas require a permit even for this.",
+   "s": "NEC 210.8 / 406 (typical US); check local rules"
+  },
+  {
+   "d": "Thermal",
+   "t": "Heat loss through a wall or window",
+   "g": "heat loss, r-value heat loss, wall heat loss, window heat loss, btu loss, u value calculation",
+   "a": "Heat flow Q = A × ΔT / R. In US units Q is BTU/h when A is in ft², ΔT in °F and R is the R-value (R-13 wall, R-38 attic, about R-3 for a double-pane window). Example: 100 ft² of R-13 wall with 40 °F inside-outside difference loses about 308 BTU/h. In metric Q = U × A × ΔT in watts, with U = 1/R(SI) and R(SI) = R(US) / 5.68.",
+   "s": "ASHRAE Fundamentals (standard conduction formula)"
+  },
+  {
+   "d": "Electrical & electronics",
+   "t": "Is 12 V or 24 V dangerous?",
+   "g": "12v dangerous, low voltage shock, 24v safe, car battery shock, extra low voltage",
+   "a": "Shock risk from 12 V or 24 V on dry skin is very low; up to about 50 V AC or 120 V DC counts as extra-low voltage. The real danger is current: car and lithium batteries can push hundreds of amps into a short, which melts wires, burns skin through rings and watches, and starts fires. Fuse every positive wire close to the battery, size wire for the current, and take off metal jewelry.",
+   "s": "IEC 61140 ELV limits (typical)"
+  },
+  {
+   "d": "Materials",
+   "t": "Heat resistance of PLA, PETG, ABS and ASA",
+   "g": "heat resistant petg, abs heat, how hot can petg get, glass transition, softening temperature, car dashboard print",
+   "a": "Printed plastics soften near their glass transition: PLA about 55–60 °C, PETG about 75–80 °C, ABS and ASA about 100–105 °C, nylon and polycarbonate higher still. Keep the working temperature 10–20 °C below that under load. A car in summer sun reaches 70–80 °C inside, so use ABS, ASA or PC there, not PLA or PETG.",
+   "s": "Typical manufacturer datasheets"
+  },
+  {
+   "d": "Construction",
+   "t": "Footing depth",
+   "g": "how deep footings, footing depth, frost line, frost depth, post footing depth, foundation depth",
+   "a": "Footings must sit on undisturbed soil and below the local frost line, with at least 12 in below grade under the US residential code. Frost depth runs from almost 0 in the far south to 4–5 ft or more in the northern US, so check the local building department. Deck post footings are commonly 8–12 in diameter or 16–24 in square pads, sized for the load and the soil bearing capacity.",
+   "s": "IRC R403.1.4 (typical); local code governs"
+  },
+  {
+   "d": "Construction",
+   "t": "Concrete bags for a fence or deck post",
+   "g": "bags of concrete post, concrete volume for a post hole, how much concrete for a post, quikrete post hole, 80 lb bag yield",
+   "a": "Bag yields: an 80 lb bag makes about 0.60 ft³, a 60 lb bag about 0.45 ft³, a 50 lb bag about 0.375 ft³. A 10 in hole 3 ft deep holds about 1.64 ft³; less a 4x4 post (0.26 ft³) that leaves about 1.4 ft³, so buy 3 × 80 lb bags (2.3 needed). Hole diameter should be about 3× the post width, and depth about ⅓ to ½ of the post height above ground, below frost.",
+   "s": "Manufacturer yield tables (typical)"
+  }
+ ],
+ "aliases": [
+  {
+   "q": "what parts can it make",
+   "k": "How to use HOLO//FORGE|Which parts exist"
+  },
+  {
+   "q": "what can you build",
+   "k": "How to use HOLO//FORGE|Which parts exist"
+  },
+  {
+   "q": "is it safe to change an outlet",
+   "k": "General|Electrical safety"
+  },
+  {
+   "q": "how long will my battery last",
+   "k": "Electrical|Battery runtime"
+  },
+  {
+   "q": "battery last",
+   "k": "Electrical|Battery runtime"
+  },
+  {
+   "q": "heat loss through a wall",
+   "k": "Thermal|R-value and U-value"
+  },
+  {
+   "q": "how do i set the load",
+   "k": "How to use HOLO//FORGE|Setting the load"
+  },
+  {
+   "q": "can i put aluminum against steel",
+   "k": "General|Galvanic corrosion"
+  },
+  {
+   "q": "how much insulation in the attic",
+   "k": "Architecture & building codes|Insulation"
+  },
+  {
+   "q": "which way should i print a bracket",
+   "k": "Manufacturing|Layer orientation"
+  },
+  {
+   "q": "how often change furnace filter",
+   "k": "HVAC|Filter MERV ratings"
+  },
+  {
+   "q": "modulus of elasticity steel",
+   "k": "Materials|Mild steel properties"
+  },
+  {
+   "q": "show it at a trade show before patent",
+   "k": "Patents|Public disclosure grace period"
+  },
+  {
+   "q": "how do i make my part lighter",
+   "k": "How to use HOLO//FORGE|Lighter, Stronger, Cheaper"
+  },
+  {
+   "q": "how heavy is aluminum",
+   "k": "Materials|Aluminum 6061-T6 properties"
+  },
+  {
+   "q": "why do parts crack over time",
+   "k": "Mechanical design|Fatigue"
+  },
+  {
+   "q": "how do i wire leds in series",
+   "k": "Electrical|LED resistor"
+  },
+  {
+   "q": "how fast will my robot go",
+   "k": "Robotics|Wheel drive torque for a robot"
+  },
+  {
+   "q": "my robot oscillates around the target",
+   "k": "Robotics|PID tuning basics"
+  },
+  {
+   "q": "imu for balancing robot",
+   "k": "Robotics|Robot sensors"
+  },
+  {
+   "q": "why does my drone wobble when i punch out",
+   "k": "Robotics|PID tuning basics"
+  }
+ ]
+}

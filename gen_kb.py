@@ -161,6 +161,18 @@ for d,t,g,a in X: add('core' if d.startswith('How') or d=='General' else 'trades
 tabs=S.tables();tabs.append({"name":"AWG copper wire","cols":["awg","d_mm","area_mm2","ohm_per_km"],"rows":[[nm,round(0.127*92**((36-n)/39),3),round(math.pi*(0.127*92**((36-n)/39))**2/4,3),round(17.24/(math.pi*(0.127*92**((36-n)/39))**2/4),2)] for nm,n in awg],"units":"mm, Ω/km"})
 tabs.append({"name":"Unit conversions","cols":["from","to","factor"],"rows":[[a,b,f] for a,b,f in U],"units":""})
 json.dump(tabs,open('kb/tables.json','w'))
+# 10b. robotics & drones knowledge (hand-written, see kb_robotics.json)
+for d,t,g,a_ in json.load(open('kb_robotics.json')): add('robotics',d,t,g,a_,'rule of thumb; check maker data')
+# 11. baked "Teach it" lessons (kb_learned.json = merged exports from the Lab Assistant's Teach-it button)
+import os
+if os.path.exists('kb_learned.json'):
+    LJ=json.load(open('kb_learned.json'));byk={e['d']+'|'+e['t']:e for v in out.values() for e in v}
+    for al in LJ.get('aliases',[]):
+        e=byk.get(al['k'])
+        if e: e.setdefault('q',[]).append(al['q'])
+        if e and al['q'].lower() not in e['g'].lower(): e['g']+=', '+al['q']
+        elif not e: print('WARN alias target missing',al)
+    for e in LJ.get('entries',[]): add('learned',e.get('d','Learned'),e['t'],e.get('g',e['t']),e['a'],e.get('s','taught via Teach it, reviewed'))
 idx={}
 for k,v in out.items(): json.dump(v,open(f'kb/{k}.json','w'),ensure_ascii=False);idx[k]=len(v)
 json.dump({"shards":idx,"total":sum(idx.values())},open('kb/index.json','w'));print(idx,sum(idx.values()))

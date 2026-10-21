@@ -20,7 +20,7 @@
 </section>
 <main id="lab" hidden>
  <header><button id="home" title="Change mode">⬡ HOLO<b>//</b>FORGE</button><span id="modeName"></span><span class="sp"></span>
-  <button id="aiBtn" class="ghost">AI: off</button><button id="helpBtn" class="ghost">?</button></header>
+  <button id="semBtn" class="ghost" title="On-device meaning matcher (free, runs in your browser)">🧠 Meaning</button><button id="learnBtn" class="ghost" title="What the assistant learned from you">✎ Learned 0</button><button id="aiBtn" class="ghost">AI: off</button><button id="helpBtn" class="ghost">?</button></header>
  <div id="prompt"><input id="q" autocomplete="off" placeholder="Describe a part… e.g. L bracket 40 mm legs, 3 mm thick, holds 5 kg"><button id="go">FORGE</button></div>
  <div id="chips"></div>
  <div id="stage"><canvas id="view"></canvas><div id="pins"></div>
@@ -40,6 +40,13 @@
  <label>Provider <select id="aiProv"><option value="xai">xAI (api.x.ai)</option><option value="openai">OpenAI</option></select></label>
  <label>API key <input id="aiKey" type="password" placeholder="sk-… / xai-…"></label><p class="muted">Used for: answering questions the built-in knowledge can't. Some providers block browser calls; if so you'll see an error and nothing else breaks.</p>
  <div class="row"><button id="aiSave">Save</button><button id="aiClear" class="ghost">Remove key</button><button id="aiClose" class="ghost">Close</button></div></dialog>
-<dialog id="helpDlg"><h3>How to use</h3><ol><li>Type a part (or tap an example chip) and press <b>FORGE</b>.</li><li>Red/amber pins on the model are weak points — read them in <b>Engineer inspection</b>.</li><li>Tap <b>Lighter / Stronger / Cheaper</b> to make a new generation. Every version is kept in <b>Generations</b>; click one to go back and branch.</li><li>Drag sliders in <b>Dimensions</b> to tweak.</li><li><b>⤓ STL</b> downloads a file for 3D printing.</li><li>Ask the <b>Lab Assistant</b> anything, by typing or 🎙.</li></ol><p class="muted">Results are quick hand-calc estimates, not a licensed engineer's sign-off.</p><div class="row"><button id="helpClose">Got it</button></div></dialog>
+<dialog id="teachDlg"><h3>✎ Teach the Lab Assistant</h3><p class="muted">What you teach is saved only in this browser and used right away. Export it to back it up or share it.</p>
+ <label>Question / the way you say it <input id="tQ"></label>
+ <label>It means this topic <input id="tTopic" list="tList" placeholder="start typing a topic…"><datalist id="tList"></datalist></label>
+ <label>…or the right answer is <textarea id="tAns" rows="3" placeholder="Type the correct answer in your own words"></textarea></label>
+ <div id="tMsg" class="muted"></div>
+ <div class="row"><button id="tSave">Save &amp; use it</button><button id="tExport" class="ghost">Export</button><button id="tImport" class="ghost">Import</button><input type="file" id="tFile" accept=".json" hidden><button id="tClose" class="ghost">Close</button></div>
+ <h4 id="tCount"></h4><div id="tLearned" class="learned"></div></dialog>
+<dialog id="helpDlg"><h3>How to use</h3><ol><li>Type a part (or tap an example chip) and press <b>FORGE</b>.</li><li>Red/amber pins on the model are weak points — read them in <b>Engineer inspection</b>.</li><li>Tap <b>Lighter / Stronger / Cheaper</b> to make a new generation. Every version is kept in <b>Generations</b>; click one to go back and branch.</li><li>Drag sliders in <b>Dimensions</b> to tweak.</li><li><b>⤓ STL</b> downloads a file for 3D printing.</li><li>Ask the <b>Lab Assistant</b> anything, by typing or 🎙. Or just describe what you need: “a shelf bracket that holds 50 lb, 8 inches deep, aluminum”, then “make it stronger”, “now in steel”, “twice as long”.</li><li>Wrong or missing answer? Press <b>✎ Teach it</b>. 🧠 Meaning loads a small free model into your browser so it understands rephrased questions.</li></ol><p class="muted">Results are quick hand-calc estimates, not a licensed engineer's sign-off.</p><div class="row"><button id="helpClose">Got it</button></div></dialog>
 <script type="module" src="app.js"></script>
 </body></html>

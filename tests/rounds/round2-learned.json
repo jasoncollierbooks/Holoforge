@@ -1,0 +1,44 @@
+{
+ "v": 1,
+ "aliases": [
+  {
+   "q": "how do i make my part lighter",
+   "k": "How to use HOLO//FORGE|Lighter, Stronger, Cheaper"
+  },
+  {
+   "q": "how heavy is aluminum",
+   "k": "Materials|Aluminum 6061-T6 properties"
+  },
+  {
+   "q": "why do parts crack over time",
+   "k": "Mechanical design|Fatigue"
+  },
+  {
+   "q": "how do i wire leds in series",
+   "k": "Electrical|LED resistor"
+  }
+ ],
+ "entries": [
+  {
+   "d": "Materials",
+   "t": "Heat resistance of PLA, PETG, ABS and ASA",
+   "g": "heat resistant petg, abs heat, how hot can petg get, glass transition, softening temperature, car dashboard print",
+   "a": "Printed plastics soften near their glass transition: PLA about 55\u201360 \u00b0C, PETG about 75\u201380 \u00b0C, ABS and ASA about 100\u2013105 \u00b0C, nylon and polycarbonate higher still. Keep the working temperature 10\u201320 \u00b0C below that under load. A car in summer sun reaches 70\u201380 \u00b0C inside, so use ABS, ASA or PC there, not PLA or PETG.",
+   "s": "Typical manufacturer datasheets"
+  },
+  {
+   "d": "Construction",
+   "t": "Footing depth",
+   "g": "how deep footings, footing depth, frost line, frost depth, post footing depth, foundation depth",
+   "a": "Footings must sit on undisturbed soil and below the local frost line, with at least 12 in below grade under the US residential code. Frost depth runs from almost 0 in the far south to 4\u20135 ft or more in the northern US, so check the local building department. Deck post footings are commonly 8\u201312 in diameter or 16\u201324 in square pads, sized for the load and the soil bearing capacity.",
+   "s": "IRC R403.1.4 (typical); local code governs"
+  },
+  {
+   "d": "Construction",
+   "t": "Concrete bags for a fence or deck post",
+   "g": "bags of concrete post, concrete volume for a post hole, how much concrete for a post, quikrete post hole, 80 lb bag yield",
+   "a": "Bag yields: an 80 lb bag makes about 0.60 ft\u00b3, a 60 lb bag about 0.45 ft\u00b3, a 50 lb bag about 0.375 ft\u00b3. A 10 in hole 3 ft deep holds about 1.64 ft\u00b3; less a 4x4 post (0.26 ft\u00b3) that leaves about 1.4 ft\u00b3, so buy 3 \u00d7 80 lb bags (2.3 needed). Hole diameter should be about 3\u00d7 the post width, and depth about \u2153 to \u00bd of the post height above ground, below frost.",
+   "s": "Manufacturer yield tables (typical)"
+  }
+ ]
+}

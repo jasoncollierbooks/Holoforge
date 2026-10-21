@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {STLExporter} from 'three/addons/exporters/STLExporter.js';
 import * as L from './parts.js';
+import * as B from './builder.js';
+import * as SEM from './semantic.js';
 const $=s=>document.querySelector(s);
-const EX={object:["mounting_plate","l_bracket","project_box","spur_gear","compression_spring","bolt","flange","shelf_bracket","timing_pulley","bearing_housing","tslot_extrusion","pipe_elbow","pull_handle","knob","butt_hinge","pcb_enclosure","cable_clip","z_bracket","u_bracket","mending_plate","wall_hook","hook_rail","v_pulley","shaft_collar","flanged_bushing","pipe_tee","pipe_coupling","pipe_clip","pipe_saddle","rect_frame","extrusion_corner","heat_set_boss","standoff","spacer","shaft","nut","washer"],bridge:["truss_bridge","beam_bridge","building_frame"],roof:["gable_roof","shed_roof","truss_roof"],invent:["phone_stand","bike_rack","planter_box","wall_hook","project_box"]};
+const EX={object:["mounting_plate","l_bracket","project_box","spur_gear","compression_spring","bolt","flange","shelf_bracket","timing_pulley","bearing_housing","tslot_extrusion","pipe_elbow","pull_handle","knob","butt_hinge","pcb_enclosure","cable_clip","z_bracket","u_bracket","mending_plate","wall_hook","hook_rail","v_pulley","shaft_collar","flanged_bushing","pipe_tee","pipe_coupling","pipe_clip","pipe_saddle","rect_frame","extrusion_corner","heat_set_boss","standoff","spacer","shaft","nut","washer","drone_frame","robot_arm_link","wheel","motor_mount"],bridge:["truss_bridge","beam_bridge","building_frame"],roof:["gable_roof","shed_roof","truss_roof"],invent:["drone_frame","robot_arm_link","phone_stand","bike_rack","planter_box","wall_hook","project_box"]};
 let mode="object",cur=null,tree=[],curId=null,KB=[],mesh=null,asm=null,anim=false,spin=false,clock=new THREE.Clock();
 // ---------- start screen ----------
 document.querySelectorAll(".modes button").forEach(b=>b.onclick=()=>{if(b.classList.contains("soon")){say("Code mode is coming to the web version. Try a physical part for now.");}enter(b.dataset.mode=="code"?"object":b.dataset.mode);});
@@ -43,16 +45,18 @@ function pins(){const box=$("#pins");if(!cur||!mesh||asm){box.innerHTML="";retur
  if($("#tInspect").classList.contains("on"))cur.issues.forEach((i,n)=>{const v=new THREE.Vector3(...i.pos).add(mesh.position).project(cam);if(v.z>1)return;h+=`<div class="pin ${i.sev}" style="left:${(v.x+1)/2*r.width}px;top:${(1-v.y)/2*r.height}px">${n+1}</div>`;});box.innerHTML=h;}
 // ---------- forging ----------
 const F_DEF=50;
-function forge(text){text=text||$("#q").value.trim();if(!text)return;asm=null;$("#tAnim").hidden=true;
- let name=L.detect(text);if(!name){say(`I don't have that in the built-in library yet. Try one of: ${Object.values(L.PARTS).map(p=>p.name.replace(/_/g," ")).join(", ")}.`+(aiKey()?" (Your AI key is set, but AI-made shapes are not in the web preview yet.)":""));return;}
- const r=L.parse(name,text),F=r.load||(L.PARTS[name].mode?0:F_DEF);addNode({name,p:r.p,mat:r.mat,F,label:"Original",log:r.notes},null);}
-function evalNode(n){const g=L.buildGeo(n.name,n.p),m=L.MATS[n.mat],vol=L.volume(g),mass=vol*1e-9*m.rho;n.issues=L.inspect(n.name,n.p,n.mat,n.F);n.safety=L.score(n.issues);n.geo=g;n.mass=mass;n.cost=mass*m.cost;return n;}
+function forge(text,quiet){text=text||$("#q").value.trim();if(!text)return;asm=null;$("#tAnim").hidden=true;
+ const pl=B.plan(text);if(!pl){say(`I don't have that in the built-in library yet. Try one of: ${Object.values(L.PARTS).map(p=>p.name.replace(/_/g," ")).join(", ")}.`+(aiKey()?" (Your AI key is set, but AI-made shapes are not in the web preview yet.)":""));return null;}
+ addNode({name:pl.name,p:pl.p,mat:pl.mat,F:pl.F,label:"Original",log:pl.why},null);if(!quiet)explain("Built from your words:",pl.why);return pl;}
+function explain(head,lines){const a=$("#answer");a.innerHTML=`<b>${head}</b><ul class="why">${lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`;}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+function evalNode(n){const g=L.buildGeo(n.name,n.p),W=L.massOf(n.name,n.p,n.mat,g);n.issues=L.inspect(n.name,n.p,n.mat,n.F);n.safety=L.score(n.issues);n.geo=g;n.mass=W.kg;n.cost=W.cost;n.wnote=W.note;return n;}
 function addNode(n,parent){n.id=tree.length;n.parent=parent;n.t=new Date();tree.push(n);select(n.id);}
 function select(id){curId=id;cur=evalNode(tree[id]);asm=null;showGeos([{geo:cur.geo}]);render();}
 function fmtMass(kg){return kg>=1000?(kg/1000).toFixed(2)+" t":kg>=1?kg.toFixed(2)+" kg":(kg*1000).toFixed(1)+" g";}
 function render(){const n=cur,P=L.PARTS[n.name],b=n.geo.boundingBox,sz=b.getSize(new THREE.Vector3());
  $("#title").textContent=P.icon+" "+n.name.replace(/_/g," ").toUpperCase()+" · "+n.label;
- const big=sz.x>5000;$("#stats").innerHTML=`${big?(sz.x/1000).toFixed(1)+" × "+(sz.y/1000).toFixed(1)+" × "+(sz.z/1000).toFixed(1)+" m":sz.x.toFixed(1)+" × "+sz.y.toFixed(1)+" × "+sz.z.toFixed(1)+" mm"}<br>${n.mat} · ${fmtMass(n.mass)} · ≈$${n.cost<10?n.cost.toFixed(2):Math.round(n.cost).toLocaleString()} material${n.F?` · load ${n.F.toFixed(0)} N`:""}<br>Safety score ${n.safety.toFixed(1)} / 3`;
+ const big=sz.x>5000;$("#stats").innerHTML=`${big?(sz.x/1000).toFixed(1)+" × "+(sz.y/1000).toFixed(1)+" × "+(sz.z/1000).toFixed(1)+" m":sz.x.toFixed(1)+" × "+sz.y.toFixed(1)+" × "+sz.z.toFixed(1)+" mm"}<br>${n.mat} · ${fmtMass(n.mass)} · ≈$${n.cost<10?n.cost.toFixed(2):Math.round(n.cost).toLocaleString()} material${n.F?` · load ${n.F.toFixed(0)} N`:""}${n.wnote?`<br><small>${n.wnote}</small>`:""}<br>Safety score ${n.safety.toFixed(1)} / 3`;
  const real=n.issues.filter(i=>i.sev!="info");$("#issues").innerHTML=(real.length?"":`<div class="ok">✔ No weak points found at this load.</div>`)+n.issues.map((i,k)=>`<div class="iss ${i.sev}">${i.sev=="info"?"ℹ":"<b>"+(k+1)+"</b>"} ${i.note}</div>`).join("");
  const o=$("#opts");o.innerHTML="";const opts=L.options(n.name,n.p,n.mat,n.F);const ic={Lighter:"🪶",Stronger:"💪",Cheaper:"💲"};
  for(const op of opts){const b=document.createElement("button");b.innerHTML=`${ic[op.name]} ${op.name}<small>safety ${op.safety} · ${op.issues} issue${op.issues==1?"":"s"}</small>`;b.title=op.log.join("\n")||"no change";b.onclick=()=>{addNode({name:n.name,p:op.p,mat:op.mat||n.mat,F:n.F,label:op.name,log:op.log},n.id);say(`${op.name}: `+(op.log.slice(0,4).join("; ")||"no change needed")+".",true);};o.append(b);}
@@ -77,10 +81,10 @@ $("#go").onclick=()=>forge();$("#q").onkeydown=e=>{if(e.key=="Enter")forge();};
 // ---------- Lab Assistant ----------
 fetch("kb/core.json").then(r=>r.json()).then(k=>KB=k);
 let shardsP=null,TABLES=null;const loadShards=()=>shardsP||(shardsP=fetch("kb/index.json").then(r=>r.json()).then(ix=>Promise.all(Object.keys(ix.shards).filter(s=>s!="core").map(s=>fetch("kb/"+s+".json").then(r=>r.json()).then(k=>KB.push(...k))))));
-setTimeout(()=>loadShards(),3000);
+setTimeout(()=>{loadShards();if(localStorage.hf_sem!="off")SEM.init(()=>{try{semLbl()}catch{}});},3000);
 async function table(q){TABLES=TABLES||await (await fetch("kb/tables.json")).json();const w=q.toLowerCase().split(/\W+/).filter(x=>x.length>2&&x!="table"&&x!="show"&&x!="list");const t=TABLES.find(t=>w.some(x=>t.name.toLowerCase().includes(x.slice(0,5))));
  if(!t)return"Tables: "+TABLES.map(t=>t.name).join(", ")+". Say ‘show table bolts’.";const a=$("#answer");return{html:`<b>${t.name}</b> (${t.units})<table class="kt"><tr>${t.cols.map(c=>`<th>${c}</th>`).join("")}</tr>${t.rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</table>`,text:`Here is the ${t.name} table.`};}
-import {search as kbS,calc,toks} from './brain.js';
+import {search as kbS,calc,toks,answer as kbA,withLearned,emptyLearned,key as kkey} from './brain.js';
 function logMiss(q){try{const L=JSON.parse(localStorage.hf_unanswered||"[]");L.push({q,t:new Date().toISOString()});localStorage.hf_unanswered=JSON.stringify(L.slice(-200));}catch{}}
 async function aiAnswer(q){const k=aiKey();if(!k)return null;const prov=localStorage.hf_prov||"xai";const url=prov=="xai"?"https://api.x.ai/v1/chat/completions":"https://api.openai.com/v1/chat/completions";
  try{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+k},body:JSON.stringify({model:prov=="xai"?"grok-3-mini":"gpt-4o-mini",messages:[{role:"system",content:"You are the Lab Assistant in a CAD app. Answer in 1-3 short sentences."},{role:"user",content:q}]})});
@@ -90,8 +94,11 @@ async function ask(q){q=(q||$("#aq").value).trim();if(!q)return;$("#aq").value="
  const steps=q.split(/\s*(?:,?\s*then\s+|;\s*|\band then\b)\s*/i).filter(Boolean);const out=[];
  for(const s of steps){const r=await one(s);if(r&&r.html){say(r.text);$("#answer").innerHTML=r.html;return;}if(r)out.push(r);}if(out.length)say(out.join("\n"));}
 async function one(s){const t=s.toLowerCase();
- if(/^(make|build|design|forge|create|draw)\b/.test(t)){const txt=s.replace(/^\w+\s+(me\s+)?(an?\s+)?/i,"");const n=L.detect(txt);if(!n)return`I can't build “${txt}” from the library yet.`;if(mode=="assembly")enter(L.PARTS[n].mode||"object");$("#q").value=txt;forge(txt);return`Built a ${n.replace(/_/g," ")}. Safety ${cur.safety.toFixed(1)} of 3, ${cur.issues.filter(i=>i.sev!="info").length} issue(s).`;}
- const og=t.match(/^(?:make it |go |do )?(lighter|stronger|cheaper)\b/);if(og){if(!cur)return"Build something first.";const op=L.options(cur.name,cur.p,cur.mat,cur.F).find(o=>o.name.toLowerCase()==og[1]);addNode({name:cur.name,p:op.p,mat:op.mat||cur.mat,F:cur.F,label:op.name,log:op.log},cur.id);return`${op.name} version G${cur.id}: safety ${cur.safety.toFixed(1)}.`;}
+ const bm=t.match(/^(?:please\s+)?(?:make|build|design|forge|create|draw|print|i need|i want|can you (?:make|build|design)|give me|how about)\b\s*(?:me\s+)?/);
+ if(bm&&!(cur&&B.isFollowup(t)&&!B.pickPart(t))){const txt=s.slice(bm[0].length).replace(/^(an?|the)\s+/i,"");const pl=B.plan(txt);if(!pl)return`I can't build “${txt}” from the library yet. Ask “what parts can it make” for the list.`;if(mode=="assembly")enter(L.PARTS[pl.name].mode||"object");$("#q").value=txt;forge(txt,true);
+  return{html:`<b>Built G${cur.id}: ${pl.name.replace(/_/g," ")}</b><ul class="why">${pl.why.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><small>Try: “make it stronger”, “now in aluminum”, “twice as long”, “thinner”.</small>`,text:`Built a ${pl.name.replace(/_/g," ")}. ${pl.why.at(-1)}`};}
+ if(cur&&!asm&&B.isFollowup(t)){const f=B.followup(s,cur);if(f){const from=cur.id;addNode({name:cur.name,p:f.p,mat:f.mat,F:f.F,label:f.label,log:f.log},from);return{html:`<b>G${cur.id} · ${esc(f.label)}</b> (from G${from})<ul class="why">${f.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>Safety ${cur.safety.toFixed(1)}/3 · ${fmtMass(cur.mass)}`,text:`${f.label}. ${f.log.slice(0,2).join(". ")}`};}}
+ if(/\b(what|which) (parts|things|shapes|designs)\b.*\b(make|build|design|do)\b|\bparts? (list|library)\b|\blist (of )?parts\b/.test(t))return"I can build: "+Object.keys(L.PARTS).map(n=>n.replace(/_/g," ")).join(", ")+". Describe one in plain words, like “a shelf bracket that holds 50 lb, 8 inches deep, aluminum”.";
  if(/\b(export|download)\b.*\bstl\b|^export\b/.test(t)){exportSTL();return"Exported STL.";}
  if(/^(inspect|check|what'?s wrong|weak)/.test(t)){if(!cur)return"Nothing to inspect yet.";const I=cur.issues.filter(i=>i.sev!="info");return I.length?I.map((i,k)=>`${k+1}. ${i.note}`).join(" "):"No weak points at this load.";}
  if(/^(go )?back\b|^undo\b/.test(t)){if(cur&&cur.parent!=null){select(cur.parent);return"Went back to G"+cur.id+".";}return"Nothing to go back to.";}
@@ -99,10 +106,35 @@ async function one(s){const t=s.toLowerCase();
  if(/\b(table|tables)\b/.test(t))return await table(s);
  const c=calc(s);if(c)return c;
  await loadShards();
- const R=kbS(KB,s,3),e=R[0];if(e&&e.conf>=0.3)return`${e.e.a}\n— ${e.e.d}: ${e.e.t}${e.e.s?" ("+e.e.s+")":""}`;
+ const K=kb2();if(semOn()){SEM.init(semLbl);}const sm=SEM.status()=="on"?await SEM.sims(s):null;const A=kbA(K,s,{sims:sm,learned:LEARN});lastQ=s;
+ if(A.e){const how={learned:"you taught me this",meaning:"matched by meaning","keyword+meaning":"keyword + meaning",keyword:"keyword match"}[A.how]||A.how;
+  return{html:`${esc(A.e.a)}<div class="src">— ${esc(A.e.d)}: ${esc(A.e.t)}${A.e.s?" ("+esc(A.e.s)+")":""} · <i>${how}</i></div>${teachBar(s,true)}`,text:A.e.a};}
  const ai=await aiAnswer(s);if(ai)return"AI: "+ai;
- logMiss(s);if(R.length)return`Not sure I have exactly that. Closest topics: ${R.map(r=>"“"+r.e.t+"”").join(", ")}. Ask about one of those, or rephrase.`;
- return"I couldn't find that. Try materials, bolts, wire, beams, roofs, HVAC, plumbing, patents, or ‘convert 2 in to mm’.";}
+ logMiss(s);const R=A.alts||[];return{html:(R.length?`Not sure I have exactly that. Closest topics: ${R.map(r=>`<button class="alt" data-k="${esc(kkey(r.e))}">${esc(r.e.t)}</button>`).join(" ")}`:"I couldn't find that.")+teachBar(s,false),text:R.length?"Not sure I have exactly that. Here are the closest topics, or teach me.":"I couldn't find that. You can teach me."};}
+// ---------- Teach it: learned memory in this browser ----------
+let LEARN=(()=>{try{return JSON.parse(localStorage.hf_learned)||emptyLearned();}catch{return emptyLearned();}})(),lastQ="",K2=null,K2n=-1;
+const saveLearn=()=>{localStorage.hf_learned=JSON.stringify(LEARN);K2=null;SEM.addEntries(LEARN.entries,e=>e.t+". "+e.a);learnLbl();};
+function kb2(){if(!K2||K2n!==KB.length){K2=withLearned(KB,LEARN);K2n=KB.length;}return K2;}
+const teachBar=(q,ok)=>`<div class="teach">${ok?`<button class="tb" data-wrong="1">✗ Wrong answer</button>`:""}<button class="tb" data-teach="1">✎ Teach it</button></div>`;
+$("#answer").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.teach||b.dataset.wrong)openTeach(lastQ);
+ if(b.dataset.k){const E=kb2().find(x=>kkey(x)==b.dataset.k);if(E){$("#answer").innerHTML=`${esc(E.a)}<div class="src">— ${esc(E.d)}: ${esc(E.t)}</div><div class="teach"><button class="tb" data-remember="${esc(E.t)}">✓ Yes, that's what I meant (remember it)</button></div>`;$("#answer").dataset.k=b.dataset.k;}}
+ if(b.dataset.remember){LEARN.aliases.push({q:lastQ,k:$("#answer").dataset.k});saveLearn();b.textContent="✓ Learned. I'll answer that next time.";b.disabled=true;}});
+function openTeach(q){$("#tQ").value=q;$("#tTopic").value="";$("#tAns").value="";$("#tMsg").textContent="";const dl=$("#tList");if(!dl.children.length||dl.children.length!=kb2().length)dl.innerHTML=kb2().map(e=>`<option value="${esc(e.t)}">${esc(e.d)}</option>`).join("");renderLearned();$("#teachDlg").showModal();}
+$("#tSave").onclick=()=>{const q=$("#tQ").value.trim(),tp=$("#tTopic").value.trim(),an=$("#tAns").value.trim();if(!q)return;
+ if(tp&&!an){const E=kb2().find(e=>e.t.toLowerCase()==tp.toLowerCase());if(!E){$("#tMsg").textContent="Pick a topic from the list, or write the answer below.";return;}LEARN.aliases=LEARN.aliases.filter(a=>a.q!=q);LEARN.aliases.push({q,k:kkey(E)});}
+ else if(an){LEARN.entries=LEARN.entries.filter(e=>e.t!=q);LEARN.entries.push({t:q,g:q,a:an});}else{$("#tMsg").textContent="Choose the right topic or type the answer.";return;}
+ saveLearn();$("#teachDlg").close();ask(q);};
+function renderLearned(){const n=LEARN.aliases.length+LEARN.entries.length;$("#tCount").textContent=n?`${n} thing${n==1?"":"s"} learned in this browser`:"Nothing learned yet";
+ $("#tLearned").innerHTML=[...LEARN.aliases.map((a,i)=>`<div>“${esc(a.q)}” → ${esc(a.k.split("|")[1])} <button data-del="a${i}">✕</button></div>`),...LEARN.entries.map((e,i)=>`<div>“${esc(e.t)}” → your answer <button data-del="e${i}">✕</button></div>`)].join("");}
+$("#tLearned").onclick=e=>{const d=e.target.dataset.del;if(!d)return;(d[0]=="a"?LEARN.aliases:LEARN.entries).splice(+d.slice(1),1);saveLearn();renderLearned();};
+$("#tExport").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(LEARN,null,1)],{type:"application/json"}));a.download="holoforge-learned.json";a.click();};
+$("#tImport").onclick=()=>$("#tFile").click();$("#tFile").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());LEARN.aliases.push(...(j.aliases||[]));LEARN.entries.push(...(j.entries||[]));saveLearn();renderLearned();$("#tMsg").textContent="Imported.";}catch{$("#tMsg").textContent="That file isn't a HOLO//FORGE learned file.";}};
+$("#tClose").onclick=()=>$("#teachDlg").close();$("#learnBtn").onclick=()=>openTeach(lastQ);
+const learnLbl=()=>{const n=LEARN.aliases.length+LEARN.entries.length;$("#learnBtn").textContent="✎ Learned "+n;};learnLbl();
+// ---------- meaning model toggle ----------
+const semOn=()=>localStorage.hf_sem!="off";
+function semLbl(){const st=SEM.status();$("#semBtn").textContent="🧠 Meaning: "+(!semOn()?"off":{off:"ready",loading:"loading…",on:"on",failed:"unavailable (keywords only)"}[st]);}
+$("#semBtn").onclick=()=>{if(semOn()&&SEM.status()=="on"){localStorage.hf_sem="off";}else{delete localStorage.hf_sem;SEM.init(semLbl);}semLbl();};semLbl();
 $("#ask").onclick=()=>ask();$("#aq").onkeydown=e=>{if(e.key=="Enter")ask();};
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 $("#mic").onclick=()=>{if(!SR)return say("Voice input needs Chrome, Edge or Safari. You can still type.");const r=new SR();r.lang="en-US";r.interimResults=false;$("#mic").classList.add("rec");
@@ -114,4 +146,4 @@ $("#aiSave").onclick=()=>{const k=$("#aiKey").value.trim();if(k){localStorage.hf
 $("#aiClear").onclick=()=>{delete localStorage.hf_key;aiLbl();$("#aiDlg").close();};$("#aiClose").onclick=()=>$("#aiDlg").close();
 $("#helpBtn").onclick=()=>$("#helpDlg").showModal();$("#helpClose").onclick=()=>$("#helpDlg").close();
 if(location.hash.length>1){const m=location.hash.slice(1);if(["object","bridge","roof","assembly","invent"].includes(m))enter(m);}
-window.HF={ask,forge,tree:()=>tree,cur:()=>cur};
+window.HF={ask,forge,tree:()=>tree,cur:()=>cur,sem:()=>SEM.status(),learned:()=>LEARN};

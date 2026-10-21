@@ -1,0 +1,22 @@
+{
+ "v": 1,
+ "aliases": [
+  {
+   "q": "how fast will my robot go",
+   "k": "Robotics|Wheel drive torque for a robot"
+  },
+  {
+   "q": "my robot oscillates around the target",
+   "k": "Robotics|PID tuning basics"
+  },
+  {
+   "q": "imu for balancing robot",
+   "k": "Robotics|Robot sensors"
+  },
+  {
+   "q": "why does my drone wobble when i punch out",
+   "k": "Robotics|PID tuning basics"
+  }
+ ],
+ "entries": []
+}

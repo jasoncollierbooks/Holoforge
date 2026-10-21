@@ -1,5 +1,5 @@
 // Sloppy-question hit-rate test for the Lab Assistant. Run: node tests/qa.mjs
-import fs from 'fs';import {search,calc} from '../brain.js';
+import fs from 'fs';import {search,calc,answer} from '../brain.js';
 const dir=new URL('../kb/',import.meta.url).pathname;const ix=JSON.parse(fs.readFileSync(dir+'index.json'));const KB=Object.keys(ix.shards).flatMap(s=>JSON.parse(fs.readFileSync(dir+s+'.json')));
 const Q=[["whats the tap drill for an m8","m8 metric bolt"],["m6 clearence hole size?","m6 metric bolt"],["how thick is 16 gauge steel","16 gauge"],["awg 12 wire diameter","awg 12 wire"],["10 gauge wire resistance","awg 10"],
 ["IPE 200 beam size","ipe200"],["ipe200 weight per meter","ipe200"],["w8x18 dimensions","w8x18"],["actual size of a 2x4","2x4 lumber"],["2x10 real dimensions","2x10"],["608 bearing size","608 bearing"],["bearing for 20mm shaft","CALC"],
@@ -21,6 +21,6 @@ const Q=[["whats the tap drill for an m8","m8 metric bolt"],["m6 clearence hole 
 ["wire size for 30 amps 50 ft 12v","CALC"],["what gauge wire for 15 amps","CALC"],["voltage drop 10 amps 100 ft 12 awg 120 v","CALC"],["area of circle 50 mm diameter","CALC"],["volume of a cylinder 300 mm diameter x 1000 mm","CALC"],
 ["concrete for slab 10 x 12 x 0.33 ft yards","CALC"],["weight of steel plate 100 x 50 x 10 mm","CALC"],["how heavy is 5 gallons of water","CALC"],["weight of aluminum rod 25 mm diameter 1 m long","CALC"],["gear ratio 12 to 36","CALC"],
 ["spring rate 1.5 mm wire 15 mm od 8 coils","CALC"],["board feet 2x6x8 10 boards","CALC"],["convert 3/4 in to mm","CALC"],["100 f to c","CALC"],["12*7.5+3","CALC"],["50 lb to kg","CALC"],["25 mph to km/h","CALC"],["gear 30 teeth module 2 diameter","CALC"]];
-let hit=0,miss=[];for(const[q,exp]of Q){let ok;if(exp=="CALC")ok=!!calc(q);else{if(calc(q)){ok=false;}const r=search(KB,q,1)[0];ok=r&&r.conf>=0.3&&(r.e.t+" "+r.e.g).toLowerCase().includes(exp);if(!ok)miss.push(`${q} -> ${r?r.e.t+" ("+r.conf.toFixed(2)+")":"none"}`);}
+let hit=0,miss=[];for(const[q,exp]of Q){let ok;if(exp=="CALC")ok=!!calc(q);else{if(calc(q)){ok=false;}const r=(a=>a.e?{e:a.e,conf:Math.max(0.3,a.conf)}:null)(answer(KB,q,{}));ok=r&&r.conf>=0.3&&(r.e.t+" "+r.e.g).toLowerCase().includes(exp);if(!ok)miss.push(`${q} -> ${r?r.e.t+" ("+r.conf.toFixed(2)+")":"none"}`);}
  if(exp=="CALC"&&!ok)miss.push(q+" -> no calc");if(ok)hit++;}
 console.log(`entries ${KB.length}  questions ${Q.length}  hits ${hit}  rate ${(hit/Q.length*100).toFixed(1)}%`);miss.forEach(m=>console.log("MISS",m));

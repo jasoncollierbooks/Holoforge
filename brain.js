@@ -23,12 +23,12 @@ export function stem(w){if(/\d/.test(w)||w.length<5)return w;return w.replace(/(
 export function norm(s){return s.toLowerCase().replace(/\b(\d+)(ga|gauge|awg|mm|in|ft|kg|lb|a|v)\b/g,"$1 $2").replace(/(\d)\s*x\s*(\d)/g,"$1x$2").replace(/[’']/g,"").replace(/[^a-z0-9.#/x ]+/g," ").replace(/(^|\s)[./]+|[./]+(\s|$)/g," ");}
 export function toks(s){const out=[];for(let w of norm(s).split(/\s+/)){if(!w||STOP.has(w))continue;w=SYN[w]||w;out.push(stem(w));}return out;}
 function lev(a,b,max){if(Math.abs(a.length-b.length)>max)return max+1;let prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){const cur=[i];let mn=i;for(let j=1;j<=b.length;j++){cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]==b[j-1]?0:1));mn=Math.min(mn,cur[j]);}if(mn>max)return max+1;prev=cur;}return prev[b.length];}
-let IDX=null,IDXN=0;
+let IDX=null,IDXN=0,IDXK=null;
 function build(KB){const docs=KB.map(e=>{const T=toks(e.t),G=toks(e.g),D=toks(e.d),A=toks(e.a);const f=new Map();const add=(arr,w)=>{for(const x of arr)f.set(x,Math.max(f.get(x)||0,w));};add(A,1);add(D,1.5);add(G,3);add(T,4);return{e,f,T:new Set(T)};});
- const df=new Map();for(const d of docs)for(const k of d.f.keys())df.set(k,(df.get(k)||0)+1);const vocab=[...df.keys()];IDX={docs,df,vocab,N:docs.length};IDXN=KB.length;}
+ const df=new Map();for(const d of docs)for(const k of d.f.keys())df.set(k,(df.get(k)||0)+1);const vocab=[...df.keys()];IDX={docs,df,vocab,N:docs.length};IDXN=KB.length;IDXK=KB;}
 function fix(w){if(IDX.df.has(w)||/\d/.test(w)||w.length<4)return[w,1];const max=w.length>=7?2:1;let best=null;for(const v of IDX.vocab){if(Math.abs(v.length-w.length)>max||v[0]!=w[0]&&max<2)continue;const d=lev(w,v,max);if(d<=max&&(!best||d<best[1]||d==best[1]&&IDX.df.get(v)>IDX.df.get(best[0])))best=[v,d];}
  if(best)return[best[0],0.8];const pre=IDX.vocab.find(v=>v.length>=5&&w.length>=5&&(v.startsWith(w)||w.startsWith(v)));return pre?[pre,0.6]:[w,0];}
-export function search(KB,q,n=3){if(!IDX||IDXN!==KB.length)build(KB);const all=[...new Set(toks(q))].map(fix),qt=all.filter(([w,c])=>c>0),unk=all.length-qt.length;if(!qt.length)return[];
+export function search(KB,q,n=3){if(!IDX||IDXN!==KB.length||IDXK!==KB)build(KB);const all=[...new Set(toks(q))].map(fix),qt=all.filter(([w,c])=>c>0),unk=all.length-qt.length;if(!qt.length)return[];
  const idf=w=>Math.log(1+IDX.N/(IDX.df.get(w)||IDX.N));const scored=[];
  for(const d of IDX.docs){let s=0,hit=0;for(const[w,c]of qt){const f=d.f.get(w);if(f){s+=f*idf(w)*c;hit++;if(/\d/.test(w)&&d.T.has(w))s+=6;}}
   if(hit){for(const t of d.T)if(/\d/.test(t)&&!qt.some(([w])=>w==t)&&qt.some(([w])=>/\d/.test(w)))s-=3;s*=(0.5+0.5*hit/qt.length);scored.push({e:d.e,s,hit});}}
@@ -46,8 +46,10 @@ const awgD=n=>0.127*92**((36-n)/39);
 function forceN(t){let m=t.match(new RegExp(N+"\\s*(kn|n|newtons?|kg|kilos?|lbs?|pounds?|lbf)\\b"));if(!m)return null;const v=+m[1],u=m[2];return u=="kn"?v*1000:/^n/.test(u)?v:/^k/.test(u)?v*9.81:v*4.448;}
 const r3=x=>+x.toPrecision(3),r4=x=>+x.toPrecision(4);
 export function calc(q){let t=q.toLowerCase().replace(/,/g," ").replace(/×/g,"x").replace(/(\d)\s*by\s*(\d)/g,"$1x$2");let m;
+ // ---- robotics & drones ----
+ {const R=robo(t);if(R)return R;}
  // unit conversion
- const U={mm:[1,"L"],cm:[10,"L"],m:[1000,"L"],km:[1e6,"L"],in:[25.4,"L"],inch:[25.4,"L"],inches:[25.4,"L"],ft:[304.8,"L"],feet:[304.8,"L"],foot:[304.8,"L"],yd:[914.4,"L"],yard:[914.4,"L"],yards:[914.4,"L"],mile:[1609344,"L"],miles:[1609344,"L"],
+ const U={mm:[1,"L"],cm:[10,"L"],m:[1000,"L"],meter:[1000,"L"],meters:[1000,"L"],metre:[1000,"L"],metres:[1000,"L"],km:[1e6,"L"],in:[25.4,"L"],inch:[25.4,"L"],inches:[25.4,"L"],ft:[304.8,"L"],feet:[304.8,"L"],foot:[304.8,"L"],yd:[914.4,"L"],yard:[914.4,"L"],yards:[914.4,"L"],mile:[1609344,"L"],miles:[1609344,"L"],
   kg:[1,"M"],g:[0.001,"M"],grams:[0.001,"M"],lb:[0.45359237,"M"],lbs:[0.45359237,"M"],pound:[0.45359237,"M"],pounds:[0.45359237,"M"],oz:[0.0283495,"M"],ounces:[0.0283495,"M"],ton:[907.18474,"M"],tonne:[1000,"M"],
   n:[1,"F"],kn:[1000,"F"],lbf:[4.4482216,"F"],kgf:[9.80665,"F"],mpa:[1,"P"],kpa:[0.001,"P"],pa:[1e-6,"P"],psi:[0.0068947573,"P"],ksi:[6.8947573,"P"],bar:[0.1,"P"],atm:[0.101325,"P"],
   "n·m":[1,"T"],nm:[1,"T"],"ft-lb":[1.3558179,"T"],"ft-lbs":[1.3558179,"T"],"lb-ft":[1.3558179,"T"],"in-lb":[0.11298483,"T"],l:[1,"V"],liter:[1,"V"],liters:[1,"V"],litre:[1,"V"],ml:[0.001,"V"],gal:[3.7854118,"V"],gallon:[3.7854118,"V"],gallons:[3.7854118,"V"],
@@ -79,11 +81,13 @@ export function calc(q){let t=q.toLowerCase().replace(/,/g," ").replace(/×/g,"x
   if(I&&L){const Lm=/^f/.test(L[2])?+L[1]*0.3048:+L[1];const d=awgD(g),A=Math.PI*d*d/4,R=0.01724*2*Lm/A,V=+(t.match(new RegExp(N+"\\s*v(?:olts?)?\\b"))||[,0])[1],dv=+I[1]*R;
    return`AWG ${g} copper, ${L[1]} ${L[2]} one way at ${I[1]} A: round-trip resistance ${r3(R)} Ω, drop ≈ ${r3(dv)} V${V?` (${r3(dv/V*100)}% of ${V} V)`:""}.`;}}
  // wire size
- if(/wire size|size wire|what (size|gauge) wire|gauge wire|wire gauge|awg.*(for|need)|cable size/.test(t)){const I=t.match(new RegExp(N+"\\s*(?:a|amps?|amperes?)\\b"));const L=t.match(new RegExp(N+"\\s*(ft|feet|foot|m|meters?|metres?)\\b"));const V=t.match(new RegExp(N+"\\s*v(?:olts?)?\\b"));
+ if(/wire size|size wire|what (size |gauge )?wire|which wire|wire (do i need |for)|gauge wire|wire gauge|awg.*(for|need)|cable size/.test(t)){const I=t.match(new RegExp(N+"\\s*(?:a|amps?|amperes?)\\b"));const L=t.match(new RegExp(N+"\\s*(ft|feet|foot|m|meters?|metres?)\\b"));const V=t.match(new RegExp(N+"\\s*v(?:olts?)?\\b"));
   if(I){const Lm=L?(/^f/.test(L[2])?+L[1]*0.3048:+L[1]):null,Vv=V?+V[1]:null,pct=3;let gauge=null;if(Lm&&Vv){const A=0.01724*2*Lm*+I[1]/(Vv*pct/100);for(let g=40;g>=-3;g--){if(Math.PI*awgD(g)**2/4>=A){gauge=g;break;}}if(gauge>0&&gauge%2&&gauge<=13)gauge-=1;
     return`For ${I[1]} A over ${L[1]} ${L[2]} at ${Vv} V with ≤${pct}% drop you need ≥ ${r3(A)} mm² copper → AWG ${gauge<0?"0".repeat(-gauge+1):gauge} (${r3(Math.PI*awgD(gauge)**2/4)} mm²) (next common size) or bigger. Also check ampacity for the insulation and installation (NEC 310.16).`;}
    return`Give me the length and voltage too, e.g. 'wire size for ${I[1]} A, 20 ft, 12 V'. For short runs, typical NEC 60 °C copper building wire: 14 AWG = 15 A, 12 AWG = 20 A, 10 AWG = 30 A, 8 AWG = 40 A, 6 AWG = 55 A.`;}}
  // area / volume
+ m=t.match(new RegExp("\\barea\\b.*?"+N+"\\s*(ft|feet|foot|m|in|inch|inches|mm|cm|yd)?\\s*(?:x|by)\\s*"+N+"\\s*(ft|feet|foot|m|in|inch|inches|mm|cm|yd)?"));if(m&&!/circle|cylinder|triangle/.test(t)){const u=(m[2]||m[4]||"").replace(/^(feet|foot)$/,"ft").replace(/^(inch|inches)$/,"in");const a=m[1]*m[3];const f={ft:0.092903,m:1,in:0.00064516,mm:1e-6,cm:1e-4,yd:0.836127}[u];
+  return`Area = ${m[1]} × ${m[3]} = ${r4(a)} ${u?u+"²":"square units"}`+(f?` = ${r4(a*f)} m²`+(u!="ft"?` = ${r4(a*f/0.092903)} ft²`:""):"")+(u=="ft"?` (${r4(a/100)} roofing squares, ${r4(a/9)} yd²)`:"")+".";}
  m=t.match(new RegExp("(?:area|size).*?circle.*?(?:diameter|dia|ø|d)?\\s*"+N+"\\s*(mm|cm|m|in|ft)?|circle.*?"+N+"\\s*(mm|cm|m|in|ft)?.*?area"));if(m&&/area/.test(t)){const d=+(m[1]||m[3]),u=m[2]||m[4]||"";const r=/radius/.test(t)?d:d/2;return`Circle ${/radius/.test(t)?"r":"Ø"} ${d}${u}: area = π·r² = ${r4(Math.PI*r*r)} ${u}² ; circumference ${r4(2*Math.PI*r)} ${u}.`;}
  if(/volume|slab|yards|capacity|how much (water|concrete|soil)|cubic|how many (yards|gallons|liters)/.test(t)){const u=(t.match(/\b(mm|cm|m|in|inch|inches|ft|feet|foot)\b/)||[,""])[1];
   if(/cylinder|tank|pipe|tube|round|column|sonotube/.test(t)&&(m=t.match(new RegExp(N+"\\s*(?:mm|cm|m|in|inch|ft|feet)?\\s*(?:diameter|dia|wide|across|x|by)\\s*.*?"+N)))){const d=+m[1],h=+m[2],v=Math.PI*(d/2)**2*h;return`Cylinder Ø${d} × ${h} ${u}: volume = π·r²·h = ${r4(v)} ${u}³${extraVol(v,u)}.`;}
@@ -111,3 +115,57 @@ export function calc(q){let t=q.toLowerCase().replace(/,/g," ").replace(/×/g,"x
  m=t.match(/(\d+(?:\.\d+)?)\s*kg.*?(?:force|newtons?|in n\b)/);if(m)return`${m[1]} kg weighs ${r4(m[1]*9.81)} N (×9.81 m/s²).`;
  return null;}
 function extraVol(v,u){const L={mm:1e-6,cm:1e-3,m:1000,in:0.0163871,inch:0.0163871,inches:0.0163871,ft:28.3168,feet:28.3168,foot:28.3168}[u];return L?` = ${r4(v*L)} L (${r4(v*L/3.78541)} US gal)`:"";}
+
+// ===================== on-device "engine": learned memory + semantic blend =====================
+export const key=e=>e.d+"|"+e.t;
+// Learned memory L = {entries:[{d,t,g,a,s}], aliases:[{q,k}]}  (k = key of the entry the phrase should map to)
+export const emptyLearned=()=>({v:1,entries:[],aliases:[]});
+export function withLearned(KB,L){if(!L||(!L.entries.length&&!L.aliases.length))return KB;const al=new Map();for(const x of L.aliases){if(!al.has(x.k))al.set(x.k,[]);al.get(x.k).push(x.q);}
+ return KB.map(e=>al.has(key(e))?{...e,g:e.g+", "+al.get(key(e)).join(", ")}:e).concat(L.entries.map(e=>({d:"Learned",s:"taught in this browser",...e})));}
+const jac=(a,b)=>{const A=new Set(a),B=new Set(b);if(!A.size||!B.size)return 0;let i=0;for(const x of A)if(B.has(x))i++;return i/(A.size+B.size-i);};
+const rt=s=>norm(s).split(/\s+/).filter(Boolean).map(w=>stem(SYN[w]||w));
+export function recall(L,KB,q){const qt=rt(q);let best=null;
+ for(const e of KB)if(e.q)for(const x of e.q){const j=jac(qt,rt(x));if(j>=0.7&&(!best||j>best.j))best={e,j};}
+ if(!L)return best&&{e:best.e,conf:1,how:"learned"};
+ for(const x of L.aliases){const j=jac(qt,rt(x.q));if(j>=0.7&&(!best||j>best.j)){const e=KB.find(e=>key(e)==x.k);if(e)best={e,j};}}
+ for(const e of L.entries){const j=jac(qt,rt(e.t));if(j>=0.7&&(!best||j>best.j))best={e:{d:"Learned",s:"taught in this browser",...e},j};}return best&&{e:best.e,conf:1,how:"learned"};}
+export function cos(a,b){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*b[i];return s;}
+// sims: Map key -> cosine similarity of the question to each entry (from the on-device embedding model). Optional.
+export const BLEND={wl:0.7,ws:1.2,s0:0.15,th:0.25,simMin:0.3,lexOnly:0.3};
+export function answer(KB,q,{sims,learned}={}){const r=recall(learned,KB,q);if(r)return{...r,alts:[]};
+ const lex=search(KB,q,8);if(!sims||!sims.size){const e=lex[0];return e&&e.conf>=BLEND.lexOnly?{e:e.e,conf:e.conf,how:"keyword",alts:lex.slice(1,3)}:{e:null,alts:lex.slice(0,3)};}
+ const cand=new Map();const add=(e,lc)=>{const k=key(e),o=cand.get(k);if(!o)cand.set(k,{e,lc,sim:sims.get(k)||0});else o.lc=Math.max(o.lc,lc);};
+ lex.forEach(x=>add(x.e,Math.min(1,x.conf)));const bySim=[...sims.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8);const km=new Map(KB.map(e=>[key(e),e]));
+ for(const[k]of bySim){const e=km.get(k);if(e)add(e,0);}
+ const qn=q.match(/\d+(?:\.\d+)?/g)||[],numPen=(e,c)=>{if(!qn.length)return 0;const tn=e.t.match(/\d+(?:\.\d+)?/g)||[];if(!tn.length)return 0;return qn.every(n=>tn.includes(n))?(c.lc>=0.2?-0.3:0):tn.some(n=>qn.includes(n))?0:0.5;};
+ const sc=[...cand.values()].map(c=>({...c,score:BLEND.wl*c.lc+BLEND.ws*Math.max(0,c.sim-BLEND.s0)-numPen(c.e,c)})).sort((a,b)=>b.score-a.score);const top=sc[0];
+ const ok=top&&(top.score>=BLEND.th&&(top.sim>=BLEND.simMin||top.lc>=0.45)||top.lc>=0.55);return ok?{e:top.e,conf:top.score,how:top.lc>=0.3?(top.sim>0.45?"keyword+meaning":"keyword"):"meaning",alts:sc.slice(1,3).map(x=>({e:x.e,conf:x.score}))}:{e:null,alts:sc.slice(0,3).map(x=>({e:x.e,conf:x.score}))};}
+
+// ---------- robotics & drone calculators ----------
+const g_=9.81;
+function massKg(t){let m=t.match(/(\d+(?:\.\d+)?)\s*(kg|g|grams?|lbs?|pounds?|oz)\b(?!\s*(?:thrust|of thrust|per motor|each))/);if(!m)return null;const v=+m[1],u=m[2];return u=="kg"?v:/^g/.test(u)?v/1000:/^l|^p/.test(u)?v*0.4536:v*0.02835;}
+function robo(t){let m;
+ const isDrone=/\b(drone|quad|quadcopter|hexa|octo|multirotor|fpv|copter)\b/.test(t);
+ // LiPo C rating -> max current
+ if(/\b\d+\s*c\b/.test(t)&&/mah|ah\b/.test(t)&&/(c[- ]?rating|max(imum)? (current|amps|discharge)|burst|how many amps|discharge|current)/.test(t)){const c=+t.match(/(\d+)\s*c\b/)[1],mah=(m=t.match(/(\d+(?:\.\d+)?)\s*mah/))?+m[1]:+t.match(/(\d+(?:\.\d+)?)\s*ah\b/)[1]*1000;const I=c*mah/1000;
+  return`Max continuous current = C × capacity = ${c} × ${r3(mah/1000)} Ah = ${r3(I)} A. Rated C numbers are often optimistic; plan on about 60–70% (${r3(I*0.65)} A) for a healthy pack, and keep the ESC/motor peak below that.`;}
+ // flight time
+ if(isDrone&&/(flight time|fly for|how long.*(fly|flight|hover)|hover time|endurance|minutes)/.test(t)&&(m=t.match(/(\d+(?:\.\d+)?)\s*mah/))){const mah=+m[1],S=(m=t.match(/(\d)\s*s\b/))?+m[1]:(m=t.match(/(\d+(?:\.\d+)?)\s*v\b/))?Math.round(+m[1]/3.7):4;const V=S*3.7;
+  const kg=massKg(t);let I=(m=t.match(/(\d+(?:\.\d+)?)\s*a(?:mps?)?\b(?!h)/))?+m[1]:null,how;if(I==null){if(!kg)return`Tell me the all-up weight (e.g. 800 g) or average current, plus battery mAh and cells, and I'll estimate flight time.`;const P=kg*1000/(/(efficient|long range|cinelifter|big prop|10 ?in|large prop)/.test(t)?10:7);I=P/V;how=`hover power ≈ ${r3(P)} W (≈${/(efficient|long range)/.test(t)?10:7} g of thrust per watt, typical) → ${r3(I)} A at ${r3(V)} V`;}else how=`${I} A average`;
+  const min=mah/1000*0.8/I*60;return`Flight time ≈ usable capacity ÷ current = ${mah} mAh × 80% ÷ ${r3(I)} A ≈ ${r3(min)} min hovering (${how}). Aggressive flying draws 2–3× more, so expect roughly ${r3(min/2.5)}–${r3(min/1.5)} min.`;}
+ // thrust to weight
+ if(/(thrust[- ]to[- ]weight|t\/w|thrust ratio|enough thrust|how much thrust)/.test(t)){const n=(m=t.match(/(\d+)\s*(?:motors?|rotors?|props?)/))?+m[1]:isDrone?4:1;
+  const th=(m=t.match(/(\d+(?:\.\d+)?)\s*(kg|g|grams?)\s*(?:of\s*)?(?:thrust|each|per motor)/))?(m[2]=="kg"?+m[1]:+m[1]/1000):null;const kg=(()=>{const x=t.replace(/(\d+(?:\.\d+)?)\s*(kg|g|grams?)\s*(?:of\s*)?(?:thrust|each|per motor)/,"");return massKg(x);})();
+  if(th&&kg){const r=th*n/kg;return`Thrust-to-weight = ${n} × ${r3(th*1000)} g ÷ ${r3(kg*1000)} g = ${r3(r)} : 1. ${r<1.5?"Too low: it will barely lift off. Aim for at least 2:1.":r<2.5?"OK for camera/cruising drones (2:1 is the usual minimum).":r<5?"Good for freestyle/sport.":"Racing-level punch."} Hover throttle ≈ ${r3(100/r)}%.`;}
+  if(kg)return`For ${r3(kg*1000)} g all-up you want total thrust of ${r3(kg*2000)} g (2:1, camera/cruise) to ${r3(kg*4000)} g (4:1, freestyle) → ${r3(kg*2000/n)}–${r3(kg*4000/n)} g per motor with ${n} motors.`;}
+ // servo / arm joint torque
+ if(/(servo|joint|arm|shoulder|elbow|actuator|motor).*torque|torque.*(servo|joint|arm|lift|hold)/.test(t)){const L=(m=t.match(/(\d+(?:\.\d+)?)\s*(mm|cm|m|in|inch|inches)\b/))?toMM(+m[1],{cm:"cm",m:"m"}[m[2]]?m[2]:m[2]):null;const Lm=L?(m[2]=="cm"?+m[1]*10:L)/1000:null;const kg=massKg(t);
+  if(Lm&&kg){const arm=(m=t.match(/arm (?:weighs|weight|of)\s*(\d+(?:\.\d+)?)\s*(g|kg)/))?(m[2]=="kg"?+m[1]:m[1]/1000):0;const T=(kg*Lm+arm*Lm/2)*g_;
+   return`Holding torque = (load × reach${arm?" + arm × reach/2":""}) × g = ${r3(T)} N·m = ${r3(T/0.0981)} kg·cm. Pick a servo/gearmotor rated at least 2× that (${r3(2*T/0.0981)} kg·cm) for acceleration and margin; servo stall ratings are not continuous ratings.`;}}
+ // wheel rpm for a speed
+ if(/rpm/.test(t)&&(m=t.match(/(\d+(?:\.\d+)?)\s*(m\/s|mph|km\/h|kph)/))&&/wheel/.test(t)){const v=+m[1]*{"m/s":1,mph:0.44704,"km/h":0.27778,kph:0.27778}[m[2]];const d=t.match(/(\d+(?:\.\d+)?)\s*(mm|cm|in|inch|inches)\b/);if(d){const dm=toMM(d[2]=="cm"?+d[1]*10:+d[1],d[2]=="cm"?"mm":d[2]);const rpm=v/(Math.PI*dm/1000)*60;return`Wheel rpm = v ÷ (π·d) × 60 = ${r3(v)} m/s ÷ (π × ${r3(dm)} mm) × 60 = ${r3(rpm)} rpm. Pick a motor about 20–30% faster to allow for load and voltage sag.`;}}
+ // wheel drive torque
+ if(/(wheel|drive|rover|robot|cart).*torque|torque.*(wheel|drive|rover|robot|motor)/.test(t)&&/wheel|diameter|radius/.test(t)){const kg=massKg(t),dm=(m=t.match(/(\d+(?:\.\d+)?)\s*(mm|cm|in|inch|inches)\s*(?:diameter|wheels?|dia)/))?toMM(m[2]=="cm"?+m[1]*10:+m[1],m[2]=="cm"?"mm":m[2]):null;
+  if(kg&&dm){const n=(m=t.match(/(\d+)\s*(?:drive )?(?:motors|wheels)/))?+m[1]:2,deg=(m=t.match(/(\d+(?:\.\d+)?)\s*(?:°|deg|degrees?)/))?+m[1]:0,a=0.5,F=kg*(a+g_*Math.sin(deg*Math.PI/180)+g_*0.03),T=F*dm/2000/n;
+   return`Drive force = m·(a + g·sinθ + g·Crr) = ${r3(kg)} kg × (0.5 + ${r3(g_*Math.sin(deg*Math.PI/180))} + 0.29) = ${r3(F)} N; per motor torque = F × r ÷ ${n} = ${r3(T)} N·m (${r3(T/0.0981)} kg·cm). Add 1.5–2× margin. Speed: rpm = v ÷ (π·d), e.g. 0.5 m/s needs ${r3(0.5/(Math.PI*dm/1000)*60)} rpm.`;}}
+ return null;}

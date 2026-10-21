@@ -1,0 +1,8 @@
+[{"req":"quadcopter frame 250 mm, 800 g all-up","part":"drone_frame","chk":"p.size==250&&F>7&&F<8.5","fu":[["make it stronger","p.arm_t>o.arm_t"],["now in aluminum","mat.startsWith('Alum')"]]},
+{"req":"fpv drone frame 220 mm with 5 mm arms","part":"drone_frame","chk":"p.size==220&&p.arm_t==5","fu":[["wider","p.arm_w>o.arm_w"]]},
+{"req":"robot arm link 200 mm that lifts 1 kg","part":"robot_arm_link","chk":"p.length==200&&F>9","fu":[["twice as long","p.length==400"],["thicker","p.thickness>o.thickness"]]},
+{"req":"wheel 100 mm for a robot","part":"wheel","chk":"p.diameter==100","fu":[["wider","p.width>o.width"]]},
+{"req":"nema 17 motor mount","part":"motor_mount","chk":"p.size==42.3","fu":[["thicker","p.thickness>o.thickness"]]},
+{"req":"nema 23 stepper bracket in aluminum","part":"motor_mount","chk":"p.size==56.4&&mat.startsWith('Alum')","fu":[]},
+{"req":"gear for a robot joint 40 teeth module 1","part":"spur_gear","chk":"p.teeth==40&&p.module==1","fu":[["in nylon","mat.startsWith('Nylon')"]]},
+{"req":"servo bracket for a robot arm","part":"motor_mount|u_bracket|l_bracket","chk":"true","fu":[]}]

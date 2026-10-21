@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {STLExporter} from 'three/addons/exporters/STLExporter.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import * as L from './parts.js';
 import * as B from './builder.js';
 import * as SEM from './semantic.js';
@@ -17,10 +18,11 @@ function enter(m){mode=m;$("#start").hidden=true;$("#lab").hidden=false;$("#mode
  else{for(const n of EX[m]){const P=L.PARTS[n],b=document.createElement("button");b.textContent=P.icon+" "+P.ex;b.onclick=()=>{$("#q").value=P.ex;forge();};ch.append(b);}$("#q").placeholder="Describe it… e.g. "+L.PARTS[EX[m][0]].ex;$("#q").value=L.PARTS[EX[m][0]].ex;forge();}
  resize();}
 // ---------- 3D hologram lab ----------
-const canvas=$("#view"),R=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
+const canvas=$("#view"),R=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});const MOBILE=matchMedia('(pointer:coarse)').matches||innerWidth<820;R.setPixelRatio(Math.min(devicePixelRatio,MOBILE?1.5:2));R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;R.outputColorSpace=THREE.SRGBColorSpace;R.shadowMap.enabled=!MOBILE;R.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,1,0.1,1e7);cam.up.set(0,0,1);cam.position.set(150,-180,140);
-const ctl=new OrbitControls(cam,canvas);ctl.enableDamping=true;
-scene.add(new THREE.HemisphereLight(0xbfefff,0x081420,1.1));const dl=new THREE.DirectionalLight(0xffffff,1.6);dl.position.set(1,-1,2);scene.add(dl);const rim=new THREE.DirectionalLight(0x37e0ff,1.2);rim.position.set(-2,2,1);scene.add(rim);
+const ctl=new OrbitControls(cam,canvas);ctl.enableDamping=true;ctl.dampingFactor=0.08;
+{const pm=new THREE.PMREMGenerator(R);scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture;}
+scene.add(new THREE.HemisphereLight(0xbfefff,0x081420,1.1));const dl=new THREE.DirectionalLight(0xffffff,1.6);dl.position.set(1,-1,2);dl.castShadow=!MOBILE;dl.shadow.mapSize.set(2048,2048);dl.shadow.bias=-0.0004;dl.shadow.normalBias=0.02;scene.add(dl);scene.add(dl.target);const rim=new THREE.DirectionalLight(0x37e0ff,1.2);rim.position.set(-2,2,1);scene.add(rim);
 const lab=new THREE.Group();scene.add(lab);
 function buildCube(size){lab.clear();const s=size;const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(s,s,s)),new THREE.LineBasicMaterial({color:0x37e0ff,transparent:true,opacity:.45}));e.position.z=s/2-s*0.02;lab.add(e);
  const g=new THREE.GridHelper(s,20,0x37e0ff,0x15506e);g.rotation.x=Math.PI/2;g.material.transparent=true;g.material.opacity=.35;lab.add(g);
@@ -28,16 +30,48 @@ function buildCube(size){lab.clear();const s=size;const e=new THREE.LineSegments
  const pts=new THREE.BufferGeometry(),a=[];for(let i=0;i<300;i++)a.push((Math.random()-.5)*s,(Math.random()-.5)*s,Math.random()*s);pts.setAttribute("position",new THREE.Float32BufferAttribute(a,3));
  const pm=new THREE.Points(pts,new THREE.PointsMaterial({color:0x7ff0ff,size:s/250,transparent:true,opacity:.6}));pm.name="dust";lab.add(pm);}
 const holo=()=>new THREE.MeshPhysicalMaterial({color:0x6fdcff,metalness:.35,roughness:.25,clearcoat:1,transparent:true,opacity:.92,emissive:0x0a3550,side:2});
-function showGeos(items){if(mesh)scene.remove(mesh);mesh=new THREE.Group();let bb=new THREE.Box3();
- for(const it of items){const m=new THREE.Mesh(it.geo,holo());if(it.color){m.material.color.set(it.color);}const ed=new THREE.LineSegments(new THREE.EdgesGeometry(it.geo,25),new THREE.LineBasicMaterial({color:0xbff6ff,transparent:true,opacity:.5}));m.add(ed);
+// ---------- realistic PBR look (per material) ----------
+let LOOK=localStorage.hf_look||"real",explode=0,explodeGoal=0;const MC=new Map();
+function woodTex(base){const c=document.createElement("canvas");c.width=c.height=256;const x=c.getContext("2d"),col=new THREE.Color(base);x.fillStyle="#"+col.getHexString();x.fillRect(0,0,256,256);
+ for(let i=0;i<70;i++){const y=Math.random()*256,a=Math.random()*0.18+0.04;x.strokeStyle=`rgba(60,30,10,${a})`;x.lineWidth=Math.random()*2.2+0.4;x.beginPath();x.moveTo(0,y);for(let k=0;k<=256;k+=16)x.lineTo(k,y+Math.sin(k/40+i)*3+Math.random()*1.5);x.stroke();}
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t;}
+const KIND=k=>{k=(k||"").toLowerCase();return /paint_/.test(k)?"paint":/steel|iron|hw|bought|stainless|chrom/.test(k)?"steel":/alu/.test(k)?"alu":/brass|gold|copper|bronze/.test(k)?"brass":/wood|cedar|pt|pine|ply|osb|mdf|oak|maple|pegboard|lumber/.test(k)?"wood":/rubber|tire|tpu/.test(k)?"rubber":/glass|acrylic|polycarb/.test(k)?"glass":/carbon/.test(k)?"carbon":/concrete|stone|block/.test(k)?"concrete":/fabric|canvas|cloth|shade/.test(k)?"fabric":/roof|metal sheet/.test(k)?"roof":/silicone|foam/.test(k)?"soft":"plastic";};
+function pbr(key,color){const kind=KIND(key),id=kind+"|"+color;if(MC.has(id))return MC.get(id);const c=new THREE.Color(color??0xb0b8c0);let m;
+ if(kind=="steel")m=new THREE.MeshStandardMaterial({color:color==null?0x9aa3ad:c,metalness:.85,roughness:.38});
+ else if(kind=="alu")m=new THREE.MeshStandardMaterial({color:color==null?0xd5dde5:c,metalness:.9,roughness:.28});
+ else if(kind=="brass")m=new THREE.MeshStandardMaterial({color:color==null?0xc9a23a:c,metalness:1,roughness:.24});
+ else if(kind=="wood")m=new THREE.MeshStandardMaterial({color:0xffffff,map:woodTex(color==null?0xd9a35b:c),roughness:.72,metalness:0});
+ else if(kind=="rubber")m=new THREE.MeshStandardMaterial({color:color==null?0x222428:c,roughness:.92});
+ else if(kind=="glass")m=new THREE.MeshPhysicalMaterial({color:color==null?0xbfe9ff:c,roughness:.05,metalness:0,transparent:true,opacity:.45,clearcoat:1});
+ else if(kind=="carbon")m=new THREE.MeshPhysicalMaterial({color:color==null?0x2a2e34:c,roughness:.35,clearcoat:1,clearcoatRoughness:.15});
+ else if(kind=="concrete")m=new THREE.MeshStandardMaterial({color:color==null?0xa7a39b:c,roughness:.95});
+ else if(kind=="fabric")m=new THREE.MeshStandardMaterial({color:color==null?0xeee6d0:c,roughness:1,side:2});
+ else if(kind=="roof")m=new THREE.MeshStandardMaterial({color:color==null?0x5a6470:c,metalness:.6,roughness:.45,side:2});
+ else if(kind=="soft")m=new THREE.MeshStandardMaterial({color:color==null?0xe8c3a8:c,roughness:.6});
+ else if(kind=="paint")m=new THREE.MeshPhysicalMaterial({color:c,roughness:.35,clearcoat:.6});
+ else m=new THREE.MeshPhysicalMaterial({color:color==null?0x4aa3df:c,roughness:.42,metalness:0,clearcoat:.25});
+ m.polygonOffset=true;m.polygonOffsetFactor=1;m.polygonOffsetUnits=1;MC.set(id,m);return m;}
+let ground=null,camGoal=null,tgtGoal=null;
+function showGeos(items,opt={}){if(mesh)scene.remove(mesh);mesh=new THREE.Group();let bb=new THREE.Box3();const real=LOOK=="real",many=items.length>400;
+ for(const it of items){const mat=real?pbr(it.paint||it.m||curMatKey(),it.color??null):holo();if(!real&&it.color)mat.color.set(it.color);const m=new THREE.Mesh(it.geo,mat);m.castShadow=m.receiveShadow=real&&!MOBILE;
+  if(!many){const ed=new THREE.LineSegments(new THREE.EdgesGeometry(it.geo,28),new THREE.LineBasicMaterial({color:real?0x0d1a22:0xbff6ff,transparent:true,opacity:real?.28:.5}));m.add(ed);}
+  m.userData.label=it.n||null;m.userData.mat=it.m||null;m.userData.sub=it.sub||null;
   const piv=new THREE.Group();piv.add(m);piv.position.set(it.x||0,0,0);piv.rotation.z=it.rz||0;piv.userData=it;mesh.add(piv);}
  scene.add(mesh);mesh.updateMatrixWorld(true);bb.setFromObject(mesh);const c=bb.getCenter(new THREE.Vector3()),sz=bb.getSize(new THREE.Vector3()),S=Math.max(sz.x,sz.y,sz.z)||1;
- mesh.position.set(-c.x,-c.y,-bb.min.z);buildCube(S*1.6);const d=S*2.1;cam.near=S/100;cam.far=S*100;cam.updateProjectionMatrix();cam.position.set(d*0.8,-d,d*0.75);ctl.target.set(0,0,sz.z/2);
- mesh.scale.set(1,1,0.001);mesh.userData.t0=performance.now();setWire($("#tWire").classList.contains("on"));}
+ mesh.position.set(-c.x,-c.y,-bb.min.z);mesh.userData.center=c;buildCube(S*1.6);const d=S*2.1;cam.near=S/100;cam.far=S*100;cam.updateProjectionMatrix();
+ const goal=new THREE.Vector3(d*0.8,-d,d*0.75),tg=new THREE.Vector3(0,0,sz.z/2);if(!opt.keepCam){camGoal=goal;tgtGoal=tg;}
+ if(cam.position.length()<1||cam.position.length()>d*20)cam.position.copy(goal);
+ if(ground)scene.remove(ground);ground=new THREE.Mesh(new THREE.PlaneGeometry(S*6,S*6),new THREE.ShadowMaterial({opacity:.28}));ground.receiveShadow=true;ground.visible=real&&!MOBILE;scene.add(ground);
+ dl.position.set(S*0.9,-S*1.1,S*2);dl.target.position.set(0,0,0);const sc=dl.shadow.camera;sc.left=sc.bottom=-S*1.2;sc.right=sc.top=S*1.2;sc.near=S*0.1;sc.far=S*6;sc.updateProjectionMatrix();
+ lab.visible=true;lab.traverse(o=>{if(o.name=="dust")o.visible=!real;});
+ mesh.scale.set(1,1,0.001);mesh.userData.t0=performance.now();setWire($("#tWire").classList.contains("on"));applyExplode(true);}
+function projItems(ev){return ev.comps3d.length<=400&&ev.comps3d.length>=ev.parts.length*0?ev.comps3d.map(c=>({geo:c.geo,m:c.m,paint:c.paint,n:c.n,sub:c.sub,color:(PJ.MATP[c.paint]||PJ.MATP[c.m]||{}).col})):ev.items;}
+function curMatKey(){return cur&&!cur.proj?cur.mat:"plastic";}
+function applyExplode(now){if(!mesh)return;const c=mesh.userData.center||new THREE.Vector3();if(now)explode=explodeGoal;mesh.children.forEach(p=>{const m=p.children[0];if(!m||!m.geometry)return;if(!m.userData.c){m.geometry.computeBoundingBox();m.userData.c=m.geometry.boundingBox.getCenter(new THREE.Vector3()).sub(c);}m.position.copy(m.userData.c).multiplyScalar(explode*0.9);});}
 function setWire(w){mesh&&mesh.traverse(o=>{if(o.isMesh)o.material.wireframe=w;});}
 function resize(){const r=$("#stage").getBoundingClientRect();if(!r.width)return;R.setSize(r.width,r.height,false);cam.aspect=r.width/r.height;cam.updateProjectionMatrix();}
 addEventListener("resize",resize);
-function loop(){requestAnimationFrame(loop);const t=clock.getElapsedTime();ctl.update();if(spin&&mesh)mesh.rotation.z+=0.005;
+function loop(){requestAnimationFrame(loop);const t=clock.getElapsedTime();if(camGoal){cam.position.lerp(camGoal,0.12);ctl.target.lerp(tgtGoal,0.12);if(cam.position.distanceTo(camGoal)<camGoal.length()*0.002)camGoal=null;}if(Math.abs(explode-explodeGoal)>0.002){explode+=(explodeGoal-explode)*0.15;applyExplode();}ctl.update();if(spin&&mesh)mesh.rotation.z+=0.005;
  if(mesh&&mesh.userData.t0){const k=Math.min(1,(performance.now()-mesh.userData.t0)/700);mesh.scale.z=0.001+(1-Math.pow(1-k,3));if(k>=1)mesh.userData.t0=0;}
  const rg=lab.getObjectByName("ring");if(rg){rg.rotation.z=t*0.3;}const du=lab.getObjectByName("dust");if(du)du.rotation.z=-t*0.03;
  if(asm&&anim)mesh.children.forEach(p=>p.userData.move&&p.userData.move(p.children[0],t*1.5));
@@ -56,7 +90,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 function evalNode(n){if(n.proj){const ev=PJ.evalProject(n.proj,n.p);n.ev=ev;n.issues=[];n.safety=3;n.mass=ev.kg;n.cost=ev.cost;n.name=ev.name;return n;}
 const g=L.buildGeo(n.name,n.p),W=L.massOf(n.name,n.p,n.mat,g);n.issues=L.inspect(n.name,n.p,n.mat,n.F);n.safety=L.score(n.issues);n.geo=g;n.mass=W.kg;n.cost=W.cost;n.wnote=W.note;return n;}
 function addNode(n,parent){n.id=tree.length;n.parent=parent;n.t=new Date();tree.push(n);select(n.id);}
-function select(id){curId=id;cur=evalNode(tree[id]);asm=null;if(cur.proj){showGeos(cur.ev.items);renderProj();return;}showGeos([{geo:cur.geo}]);render();}
+function select(id){curId=id;cur=evalNode(tree[id]);asm=null;if(cur.proj){showGeos(projItems(cur.ev));renderProj();return;}showGeos([{geo:cur.geo}]);render();}
 function fmtMass(kg){return kg>=1000?(kg/1000).toFixed(2)+" t":kg>=1?kg.toFixed(2)+" kg":(kg*1000).toFixed(1)+" g";}
 function render(){const n=cur,P=L.PARTS[n.name],b=n.geo.boundingBox,sz=b.getSize(new THREE.Vector3());
  $("#title").textContent=P.icon+" "+n.name.replace(/_/g," ").toUpperCase()+" · "+n.label;
@@ -66,7 +100,7 @@ function render(){const n=cur,P=L.PARTS[n.name],b=n.geo.boundingBox,sz=b.getSize
  for(const op of opts){const b=document.createElement("button");b.innerHTML=`${ic[op.name]} ${op.name}<small>safety ${op.safety} · ${op.issues} issue${op.issues==1?"":"s"}</small>`;b.title=op.log.join("\n")||"no change";b.onclick=()=>{addNode({name:n.name,p:op.p,mat:op.mat||n.mat,F:n.F,label:op.name,log:op.log},n.id);say(`${op.name}: `+(op.log.slice(0,4).join("; ")||"no change needed")+".",true);};o.append(b);}
  const pr=$("#params");pr.innerHTML="";for(const k in P.P){const[d,lo,hi,lab]=P.P[k];const st=hi-lo>50?1:hi-lo>5?0.5:0.1;const w=document.createElement("div");w.className="prm";
   w.innerHTML=`<span>${lab}</span><input type="number" step="${st}" value="${n.p[k]}"><input type="range" min="${lo}" max="${hi}" step="${st}" value="${n.p[k]}">`;const[num,rng]=w.querySelectorAll("input");
-  const set=v=>{n.p[k]=+v;num.value=v;rng.value=v;evalNode(n);showGeos([{geo:n.geo}]);mesh.scale.z=1;mesh.userData.t0=0;render();};rng.oninput=e=>set(e.target.value);num.onchange=e=>set(e.target.value);pr.append(w);}
+  const set=v=>{n.p[k]=+v;num.value=v;rng.value=v;evalNode(n);showGeos([{geo:n.geo}],{keepCam:true});mesh.scale.z=1;mesh.userData.t0=0;render();};rng.oninput=e=>set(e.target.value);num.onchange=e=>set(e.target.value);pr.append(w);}
  drawTree();}
 const fmtUSD=c=>"$"+(c<10?c.toFixed(2):Math.round(c).toLocaleString());
 const fmtP=(v,u)=>u=="b"?(v?"yes":"no"):v+(u&&u!="n"?" "+u:"");
@@ -85,14 +119,21 @@ function renderProj(){const n=cur,ev=n.ev,D=PJ.PROJECTS[n.proj];const sz0=mesh.s
  $("#issues").innerHTML=h;
  const o=$("#opts");o.innerHTML="";const acts=[["⬆ Bigger","make it bigger"],["⬇ Smaller","make it smaller"],...D.mats.filter(m=>m!=n.p.mat).slice(0,3).map(m=>["◧ "+(PJ.MATP[m]||{n:m}).n,"use "+({pt:"pressure treated",alu:"aluminum",ply:"plywood",pla:"pla",petg:"petg",abs:"abs",wood:"wood",steel:"steel",cedar:"cedar",carbon:"carbon",acrylic:"acrylic",mdf:"plywood"}[m]||m)])];
  for(const[lbl,cmd]of acts){const b=document.createElement("button");b.innerHTML=lbl;b.onclick=()=>{const r=projEdit(cmd);if(r)say(r.text,true);};o.append(b);}
- const pr=$("#params");pr.innerHTML="";for(const k in D.P){const[d,lo,hi,lab,u]=D.P[k];const w=document.createElement("div");w.className="prm";
+ const pr=$("#params");pr.innerHTML="";for(const k in D.P){const[d,lo,hi,lab,u]=D.P[k];if(lab=="-"||(lo==hi&&u!="b"))continue;const w=document.createElement("div");w.className="prm";
   if(u=="b"){w.innerHTML=`<span>${lab}</span><input type="checkbox" ${n.p[k]?"checked":""}>`;w.querySelector("input").onchange=e=>{const p={...n.p,[k]:e.target.checked?1:0};addNode({proj:n.proj,p,label:(e.target.checked?"+ ":"− ")+lab,log:[`${lab} ${e.target.checked?"added":"removed"}`]},n.id);};pr.append(w);continue;}
   const st=hi-lo>50?1:hi-lo>5?0.5:0.1;w.innerHTML=`<span>${lab}${u&&u!="n"?" ("+u+")":""}</span><input type="number" step="${st}" value="${n.p[k]}"><input type="range" min="${lo}" max="${hi}" step="${st}" value="${n.p[k]}">`;const[num,rng]=w.querySelectorAll("input");
-  const set=v=>{n.p[k]=+v;num.value=v;rng.value=v;evalNode(n);showGeos(n.ev.items);mesh.scale.z=1;mesh.userData.t0=0;renderProj();};rng.onchange=e=>set(e.target.value);num.onchange=e=>set(e.target.value);pr.append(w);}
+  const set=v=>{n.p[k]=+v;num.value=v;rng.value=v;evalNode(n);showGeos(projItems(n.ev),{keepCam:true});mesh.scale.z=1;mesh.userData.t0=0;renderProj();};rng.onchange=e=>set(e.target.value);num.onchange=e=>set(e.target.value);pr.append(w);}
  drawTree();}
-function projHints(n){const D=PJ.PROJECTS[n.proj],h=["“make it bigger”"];if(D.size)h.push("“"+D.size.slice(0,2).map(k=>Math.round(n.p[k]*1.25)).join("x")+"”");const b=Object.keys(D.P).filter(k=>D.P[k][4]=="b");for(const k of b.slice(0,2)){const w=D.P[k][5][0].replace(/[?\\()|]/g,"").replace(/s$/,"");h.push(n.p[k]?`“no ${w}”`:`“add ${w}”`);};const m=D.mats.find(m=>m!=n.p.mat);if(m)h.push(`“use ${(PJ.MATP[m]||{n:m}).n.toLowerCase()}”`);return h.join(", ");}
-function projEdit(s){const f=PJ.projFollow(s,cur);if(!f)return null;const from=cur.id;addNode({proj:cur.proj,p:f.p,label:f.label,log:f.log},from);
- return{html:`<b>G${cur.id} · ${esc(f.label)}</b> (from G${from}) — ${esc(cur.ev.name)}<ul class="why">${f.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>${fmtMass(cur.mass)} · ≈${fmtUSD(cur.cost)}`,text:`${f.label}. ${f.log.slice(0,2).join(". ")}`};}
+function projHints(n){const D=PJ.PROJECTS[n.proj],h=["“make it bigger”"];if(D.size)h.push("“"+D.size.slice(0,2).map(k=>Math.round(n.p[k]*1.25)).join("x")+"”");const b=Object.keys(D.P).filter(k=>D.P[k][4]=="b"&&D.P[k][3]!="-");for(const k of b.slice(0,2)){const w=((D.P[k][5]||[])[0]||D.P[k][3]||k).toLowerCase().replace(/[?\\()|]/g,"").replace(/s$/,"");h.push(n.p[k]?`“no ${w}”`:`“add ${w}”`);};const m=D.mats.find(m=>m!=n.p.mat);if(m)h.push(`“use ${(PJ.MATP[m]||{n:m}).n.toLowerCase()}”`);return h.join(", ");}
+function evSize(ev){const b=new THREE.Box3();for(const it of ev.items){it.geo.computeBoundingBox();b.union(it.geo.boundingBox);}return b.getSize(new THREE.Vector3());}
+const sgn=(v,f)=>(v>0?"+":v<0?"−":"±")+f(Math.abs(v));
+function diffHTML(a,b){const sa=evSize(a.ev),sb=evSize(b.ev),dk=b.ev.kg-a.ev.kg,dc=b.ev.cost-a.ev.cost,cls=v=>v>0?"up":v<0?"dn":"";const m=v=>(v/1000).toFixed(2)+" m";
+ const ch=[];const D=PJ.PROJECTS[b.proj];for(const k in D.P)if(a.p[k]!==b.p[k])ch.push(`${D.P[k][3]}: ${fmtP(a.p[k],D.P[k][4])} → ${fmtP(b.p[k],D.P[k][4])}`);if(a.p.mat!==b.p.mat)ch.push(`Material: ${(PJ.MATP[a.p.mat]||{}).n} → ${(PJ.MATP[b.p.mat]||{}).n}`);
+ if(JSON.stringify(a.p._part||{})!=JSON.stringify(b.p._part||{}))ch.push("Sub-part sizes: "+Object.entries(b.p._part||{}).map(([w,o])=>w+" "+Object.entries(o).map(([k,v])=>k[0]=="s"?"×"+v+" "+k.slice(1):k.slice(1)+"="+Math.round(v)+" mm").join(",")).join("; "));
+ if(JSON.stringify(a.p._paint||{})!=JSON.stringify(b.p._paint||{}))ch.push("Paint: "+Object.entries(b.p._paint||{}).map(([w,c])=>w+" "+c).join(", "));
+ return`<table class="kt cmp"><tr><th></th><th>G${a.id}</th><th>G${b.id}</th><th>Δ</th></tr><tr><td>Size</td><td>${m(sa.x)}×${m(sa.y)}×${m(sa.z)}</td><td>${m(sb.x)}×${m(sb.y)}×${m(sb.z)}</td><td>${[["L",sb.x-sa.x],["W",sb.y-sa.y],["H",sb.z-sa.z]].filter(([,v])=>Math.abs(v)>0.5).map(([k,v])=>k+" "+sgn(v,m)).join(", ")||"±0"}</td></tr><tr><td>Weight</td><td>${fmtMass(a.ev.kg)}</td><td>${fmtMass(b.ev.kg)}</td><td class="${cls(dk)}">${sgn(dk,fmtMass)}</td></tr><tr><td>Cost</td><td>${fmtUSD(a.ev.cost)}</td><td>${fmtUSD(b.ev.cost)}</td><td class="${cls(dc)}">${sgn(dc,fmtUSD)}</td></tr><tr><td>Line items</td><td>${a.ev.parts.length}</td><td>${b.ev.parts.length}</td><td>${sgn(b.ev.parts.length-a.ev.parts.length,String)}</td></tr></table>${ch.length?`<div class="diff">Changed: ${ch.map(esc).join(" · ")}</div>`:`<div class="diff">No parameter differences.</div>`}`;}
+function projEdit(s){const f=PJ.projFollow(s,cur);if(!f)return null;const from=cur.id,prev=cur;addNode({proj:cur.proj,p:f.p,label:f.label,log:f.log},from);
+ return{html:`<b>G${cur.id} · ${esc(f.label)}</b> (from G${from}) — ${esc(cur.ev.name)}<ul class="why">${f.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>${diffHTML(prev,cur)}<small>Say “undo” to go back or “compare to last version”.</small>`,text:`${f.label}. ${f.log.slice(0,2).join(". ")}. Weight ${fmtMass(cur.mass)}, cost about ${fmtUSD(cur.cost)}.`};}
 function drawTree(){const t=$("#tree");t.classList.remove("muted");const kids=id=>tree.filter(x=>x.parent===id);let h="";
  const walk=(n,d)=>{h+=`<div class="node ${n.id===curId?"cur":""}" data-id="${n.id}" style="margin-left:${d*14}px">${d?"└ ":""}<b>G${n.id}</b> ${n.label} · ${n.proj?esc(n.name||PJ.PROJECTS[n.proj].name):n.name.replace(/_/g," ")+" · safety "+(n.safety??L.score(L.inspect(n.name,n.p,n.mat,n.F))).toFixed(1)}</div>`;kids(n.id).forEach(k=>walk(k,d+1));};
  tree.filter(x=>x.parent===null).forEach(r=>walk(r,0));t.innerHTML=h;t.querySelectorAll(".node").forEach(e=>e.onclick=()=>select(+e.dataset.id));}
@@ -101,7 +142,17 @@ function buildAsm(k){const A=L.ASSEMBLIES[k];asm=k;cur=null;const parts=A.build(
  $("#issues").innerHTML=`<div class="muted">Assembly preview: press ▶ Move to run the ${A.joint} joint. Stress checks for assemblies are coming.</div>`;$("#opts").innerHTML="";$("#params").innerHTML="";}
 // ---------- tools ----------
 const tog=(id,f)=>$(id).onclick=()=>{$(id).classList.toggle("on");f($(id).classList.contains("on"));};
-tog("#tInspect",()=>{});tog("#tWire",setWire);tog("#tSpin",v=>spin=v);tog("#tAnim",v=>anim=v);
+tog("#tInspect",()=>{});tog("#tExplode",v=>{explodeGoal=v?1:0;});
+$("#tLook").textContent=LOOK=="real"?"◉ Real":"✦ Holo";$("#tLook").onclick=()=>{LOOK=LOOK=="real"?"holo":"real";localStorage.hf_look=LOOK;$("#tLook").textContent=LOOK=="real"?"◉ Real":"✦ Holo";if(cur)select(cur.id);};
+// ---------- hover labels + click a part for edit chips ----------
+const ray=new THREE.Raycaster(),mp=new THREE.Vector2();let hovT=0;
+function pick(e){if(!mesh)return null;const r=canvas.getBoundingClientRect();mp.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mp,cam);const h=ray.intersectObject(mesh,true).find(x=>x.object.isMesh);return h?{o:h.object,r,e}:null;}
+canvas.addEventListener("pointermove",e=>{const now=performance.now();if(now-hovT<60)return;hovT=now;const h=pick(e),tip=$("#tip");if(!h||!h.o.userData.label){tip.hidden=true;return;}tip.hidden=false;const u=h.o.userData;tip.innerHTML=`<b>${esc(u.label)}</b>${u.mat?" · "+esc((PJ.MATP[u.mat]||{n:u.mat}).n):""}${u.sub?"<br><small>"+esc(u.sub)+"</small>":""}`;tip.style.left=(e.clientX-h.r.left+14)+"px";tip.style.top=(e.clientY-h.r.top+10)+"px";});
+canvas.addEventListener("pointerleave",()=>$("#tip").hidden=true);
+let downAt=null;canvas.addEventListener("pointerdown",e=>downAt=[e.clientX,e.clientY]);
+canvas.addEventListener("pointerup",e=>{if(!downAt||Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])>5)return;const h=pick(e);if(!h||!cur||!cur.proj||!h.o.userData.label)return;partChips(h.o.userData.label);});
+function partChips(label){const chips=PJ.partSuggestions(cur.proj,cur.p,label);const a=$("#answer");a.innerHTML=`<b>${esc(label)}</b> — suggested edits:<div class="pchips">${chips.map(c=>`<button class="alt" data-edit="${esc(c)}">${esc(c)}</button>`).join(" ")}</div>`;}
+$("#answer").addEventListener("click",e=>{const b=e.target.closest("button[data-edit]");if(b)ask(b.dataset.edit);});tog("#tWire",setWire);tog("#tSpin",v=>spin=v);tog("#tAnim",v=>anim=v);
 $("#tStl").onclick=exportSTL;
 function exportSTL(){if(!mesh)return say("Build something first.");mesh.updateMatrixWorld(true);const ex=new STLExporter(),s=new THREE.Scene(),c=mesh.clone(true);c.scale.set(1,1,1);c.position.set(0,0,0);c.rotation.z=0;
  c.traverse(o=>{if(o.isLineSegments)o.visible=false;});s.add(c);const data=ex.parse(s,{binary:true});
@@ -123,9 +174,11 @@ async function ask(q){q=(q||$("#aq").value).trim();if(!q)return;$("#aq").value="
  const steps=q.split(/\s*(?:,?\s*then\s+|;\s*|\band then\b)\s*/i).filter(Boolean);const out=[];
  for(const s of steps){const r=await one(s);if(r&&r.html){say(r.text);$("#answer").innerHTML=r.html;return;}if(r)out.push(r);}if(out.length)say(out.join("\n"));}
 async function one(s){const t=s.toLowerCase();
+ if(cur&&cur.proj&&/\b(compare|diff|what changed|versus|vs\.? (the )?(last|previous|original))\b/.test(t)){let other=null;const m=t.match(/\bg(\d+)\b/);if(m&&tree[+m[1]]&&tree[+m[1]].proj==cur.proj)other=evalNode(tree[+m[1]]);else if(/original|first/.test(t)){let n=cur;while(n.parent!=null)n=tree[n.parent];other=evalNode(n);}else if(cur.parent!=null)other=evalNode(tree[cur.parent]);if(!other||other===cur)return"Nothing to compare yet. Make an edit first.";if(other.proj!=cur.proj)return"The last version is a different design.";return{html:`<b>Compare G${other.id} → G${cur.id}</b>${diffHTML(other,cur)}`,text:`Compared G${other.id} with G${cur.id}.`};}
+ if(cur&&/^(undo|go back|back|revert)\b/.test(t)){if(cur.parent!=null){const p=cur.parent;select(p);return"Undid that: back to G"+p+".";}return"Nothing to undo.";}
  if(cur&&cur.proj&&!asm){const pr=PJ.route(s,LEARN);if(!pr||pr.id==cur.proj&&!/^(please\s+)?(make|build|design|create)\s+(me\s+)?(an?|the)\s/.test(t)){const r=projEdit(s);if(r)return r;}}
  const bq=/^(?:please\s+)?(?:make|build|design|forge|create|draw|plan|i need|i want|can you (?:make|build|design|plan)|give me|how (?:do|would|can) (?:i|you) (?:build|make))\b/.test(t)||/\bthink big\b/.test(t);
- if(bq){const pr=PJ.route(s,LEARN);if(pr){if(mode!="projects"&&$("#lab").hidden)enter("projects");$("#q").value=s;const r=forge(s,true);if(r&&r.proj)return{html:`<b>Built G${cur.id}: ${esc(cur.ev.name)}</b><ul class="why">${cur.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><small>Try: ${esc(projHints(cur))}.</small>`,text:`Built the ${cur.ev.name}. ${fmtMass(cur.mass)}, about ${fmtUSD(cur.cost)}.`};}}
+ {const pr=(bq||mode=="projects")?PJ.route(s,LEARN):null;if(pr&&(bq||pr.len>0)){if(mode!="projects"&&$("#lab").hidden)enter("projects");$("#q").value=s;const r=forge(s,true);if(r&&r.proj)return{html:`<b>Built G${cur.id}: ${esc(cur.ev.name)}</b><ul class="why">${cur.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><small>Try: ${esc(projHints(cur))}.</small>`,text:`Built the ${cur.ev.name}. ${fmtMass(cur.mass)}, about ${fmtUSD(cur.cost)}.`};}}
  const bm=t.match(/^(?:please\s+)?(?:make|build|design|forge|create|draw|print|i need|i want|can you (?:make|build|design)|give me|how about)\b\s*(?:me\s+)?/);
  if(bm&&!(cur&&B.isFollowup(t)&&!B.pickPart(t))){const txt=s.slice(bm[0].length).replace(/^(an?|the)\s+/i,"");const pl=B.plan(txt);if(!pl)return`I can't build “${txt}” from the library yet. Ask “what parts can it make” for the list.`;if(mode=="assembly")enter(L.PARTS[pl.name].mode||"object");$("#q").value=txt;forge(txt,true);
   return{html:`<b>Built G${cur.id}: ${pl.name.replace(/_/g," ")}</b><ul class="why">${pl.why.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><small>Try: “make it stronger”, “now in aluminum”, “twice as long”, “thinner”.</small>`,text:`Built a ${pl.name.replace(/_/g," ")}. ${pl.why.at(-1)}`};}

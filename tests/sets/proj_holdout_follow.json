@@ -1,0 +1,8 @@
+[["6x12 work trailer",[["actually make it 7x16","p.W==7&&p.L==16"],["drop the compressor","p.comp==0"],["make it smaller","p.L<o.L"]]],
+["8x10 shed",[["make it 10 ft wide","p.W==10"],["add a window","p.window==1"],["use pressure treated","p.mat=='pt'"]]],
+["pirate ship",[["50% bigger","p.L>o.L"],["make it out of wood","p.mat=='wood'"]]],
+["robot rover",[["add a camera","p.cam==1"],["make it longer","p.L>o.L"]]],
+["self replicating animatronic",[["without skin","p.skin==0"],["half the size","p.H<o.H"]]],
+["deck 12x16",[["no stairs","p.stairs==0"],["make it 20 ft long","p.L==20"]]],
+["bookshelf",[["make it taller","p.H>o.H"],["7 shelves","p.shelves==7"],["add doors","p.doors==1"]]],
+["mars rover",[["no arm","p.arm==0"],["twice as long","p.L>o.L"]]]]

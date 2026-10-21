@@ -4,14 +4,16 @@ import {STLExporter} from 'three/addons/exporters/STLExporter.js';
 import * as L from './parts.js';
 import * as B from './builder.js';
 import * as SEM from './semantic.js';
+import * as PJ from './projhub.js';
 const $=s=>document.querySelector(s);
-const EX={object:["mounting_plate","l_bracket","project_box","spur_gear","compression_spring","bolt","flange","shelf_bracket","timing_pulley","bearing_housing","tslot_extrusion","pipe_elbow","pull_handle","knob","butt_hinge","pcb_enclosure","cable_clip","z_bracket","u_bracket","mending_plate","wall_hook","hook_rail","v_pulley","shaft_collar","flanged_bushing","pipe_tee","pipe_coupling","pipe_clip","pipe_saddle","rect_frame","extrusion_corner","heat_set_boss","standoff","spacer","shaft","nut","washer","drone_frame","robot_arm_link","wheel","motor_mount"],bridge:["truss_bridge","beam_bridge","building_frame"],roof:["gable_roof","shed_roof","truss_roof"],invent:["drone_frame","robot_arm_link","phone_stand","bike_rack","planter_box","wall_hook","project_box"]};
+const EX={object:["mounting_plate","l_bracket","project_box","spur_gear","compression_spring","bolt","flange","shelf_bracket","timing_pulley","bearing_housing","tslot_extrusion","pipe_elbow","pull_handle","knob","butt_hinge","pcb_enclosure","cable_clip","z_bracket","u_bracket","mending_plate","wall_hook","hook_rail","v_pulley","shaft_collar","flanged_bushing","pipe_tee","pipe_coupling","pipe_clip","pipe_saddle","rect_frame","extrusion_corner","heat_set_boss","standoff","spacer","shaft","nut","washer","drone_frame","robot_arm_link","wheel","motor_mount"],bridge:["truss_bridge","beam_bridge","building_frame"],roof:["gable_roof","shed_roof","truss_roof"],projects:["pirate_ship","v8_engine","work_trailer","vn_animatronic","shed","workbench","go_kart","rover","trebuchet","pergola","arcade_cabinet","filament_dryer","tiny_house","mars_rover"],invent:["drone_frame","robot_arm_link","phone_stand","bike_rack","planter_box","wall_hook","project_box"]};
 let mode="object",cur=null,tree=[],curId=null,KB=[],mesh=null,asm=null,anim=false,spin=false,clock=new THREE.Clock();
 // ---------- start screen ----------
 document.querySelectorAll(".modes button").forEach(b=>b.onclick=()=>{if(b.classList.contains("soon")){say("Code mode is coming to the web version. Try a physical part for now.");}enter(b.dataset.mode=="code"?"object":b.dataset.mode);});
 $("#home").onclick=()=>{$("#lab").hidden=true;$("#start").hidden=false;};
-function enter(m){mode=m;$("#start").hidden=true;$("#lab").hidden=false;$("#modeName").textContent={object:"Physical part",bridge:"Bridges & buildings",roof:"Roofs",assembly:"Assemblies",invent:"Invent"}[m];
+function enter(m){mode=m;$("#start").hidden=true;$("#lab").hidden=false;$("#modeName").textContent={object:"Physical part",bridge:"Bridges & buildings",roof:"Roofs",assembly:"Assemblies",invent:"Invent",projects:"Projects"}[m];
  const ch=$("#chips");ch.innerHTML="";if(m=="assembly"){for(const k in L.ASSEMBLIES){const b=document.createElement("button");b.textContent="🔗 "+L.ASSEMBLIES[k].name;b.onclick=()=>buildAsm(k);ch.append(b);}$("#q").placeholder="Pick an assembly above (hinge, gear pair, slider)";buildAsm("hinge");}
+ else if(m=="projects"){for(const id of EX.projects){const D=PJ.PROJECTS[id],ex=D.ex||("build a "+D.name.toLowerCase().replace(/\s*\(.*\)/,""));const b=document.createElement("button");b.textContent="🧩 "+D.name;b.onclick=()=>{$("#q").value=ex;forge();};ch.append(b);}$("#q").placeholder="Describe a project… e.g. 7x14 work trailer with shelving, a pirate ship, think big: a von Neumann animatronic";$("#q").value="build a pirate ship";forge();}
  else{for(const n of EX[m]){const P=L.PARTS[n],b=document.createElement("button");b.textContent=P.icon+" "+P.ex;b.onclick=()=>{$("#q").value=P.ex;forge();};ch.append(b);}$("#q").placeholder="Describe it… e.g. "+L.PARTS[EX[m][0]].ex;$("#q").value=L.PARTS[EX[m][0]].ex;forge();}
  resize();}
 // ---------- 3D hologram lab ----------
@@ -46,13 +48,15 @@ function pins(){const box=$("#pins");if(!cur||!mesh||asm){box.innerHTML="";retur
 // ---------- forging ----------
 const F_DEF=50;
 function forge(text,quiet){text=text||$("#q").value.trim();if(!text)return;asm=null;$("#tAnim").hidden=true;
+ const rt=PJ.route(text,LEARN);if(rt){const pp=PJ.planProject(rt.id,text);addNode({proj:rt.id,p:pp.p,label:"Original",log:[...pp.why,"Matched because "+rt.why+"."]},null);if(!quiet)explain("Project from your words:",cur.log);return{proj:rt.id,why:cur.log};}
  const pl=B.plan(text);if(!pl){say(`I don't have that in the built-in library yet. Try one of: ${Object.values(L.PARTS).map(p=>p.name.replace(/_/g," ")).join(", ")}.`+(aiKey()?" (Your AI key is set, but AI-made shapes are not in the web preview yet.)":""));return null;}
  addNode({name:pl.name,p:pl.p,mat:pl.mat,F:pl.F,label:"Original",log:pl.why},null);if(!quiet)explain("Built from your words:",pl.why);return pl;}
 function explain(head,lines){const a=$("#answer");a.innerHTML=`<b>${head}</b><ul class="why">${lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`;}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
-function evalNode(n){const g=L.buildGeo(n.name,n.p),W=L.massOf(n.name,n.p,n.mat,g);n.issues=L.inspect(n.name,n.p,n.mat,n.F);n.safety=L.score(n.issues);n.geo=g;n.mass=W.kg;n.cost=W.cost;n.wnote=W.note;return n;}
+function evalNode(n){if(n.proj){const ev=PJ.evalProject(n.proj,n.p);n.ev=ev;n.issues=[];n.safety=3;n.mass=ev.kg;n.cost=ev.cost;n.name=ev.name;return n;}
+const g=L.buildGeo(n.name,n.p),W=L.massOf(n.name,n.p,n.mat,g);n.issues=L.inspect(n.name,n.p,n.mat,n.F);n.safety=L.score(n.issues);n.geo=g;n.mass=W.kg;n.cost=W.cost;n.wnote=W.note;return n;}
 function addNode(n,parent){n.id=tree.length;n.parent=parent;n.t=new Date();tree.push(n);select(n.id);}
-function select(id){curId=id;cur=evalNode(tree[id]);asm=null;showGeos([{geo:cur.geo}]);render();}
+function select(id){curId=id;cur=evalNode(tree[id]);asm=null;if(cur.proj){showGeos(cur.ev.items);renderProj();return;}showGeos([{geo:cur.geo}]);render();}
 function fmtMass(kg){return kg>=1000?(kg/1000).toFixed(2)+" t":kg>=1?kg.toFixed(2)+" kg":(kg*1000).toFixed(1)+" g";}
 function render(){const n=cur,P=L.PARTS[n.name],b=n.geo.boundingBox,sz=b.getSize(new THREE.Vector3());
  $("#title").textContent=P.icon+" "+n.name.replace(/_/g," ").toUpperCase()+" · "+n.label;
@@ -64,8 +68,33 @@ function render(){const n=cur,P=L.PARTS[n.name],b=n.geo.boundingBox,sz=b.getSize
   w.innerHTML=`<span>${lab}</span><input type="number" step="${st}" value="${n.p[k]}"><input type="range" min="${lo}" max="${hi}" step="${st}" value="${n.p[k]}">`;const[num,rng]=w.querySelectorAll("input");
   const set=v=>{n.p[k]=+v;num.value=v;rng.value=v;evalNode(n);showGeos([{geo:n.geo}]);mesh.scale.z=1;mesh.userData.t0=0;render();};rng.oninput=e=>set(e.target.value);num.onchange=e=>set(e.target.value);pr.append(w);}
  drawTree();}
+const fmtUSD=c=>"$"+(c<10?c.toFixed(2):Math.round(c).toLocaleString());
+const fmtP=(v,u)=>u=="b"?(v?"yes":"no"):v+(u&&u!="n"?" "+u:"");
+function renderProj(){const n=cur,ev=n.ev,D=PJ.PROJECTS[n.proj];const sz0=mesh.scale.z;mesh.scale.z=1;mesh.updateMatrixWorld(true);const sz=new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3());mesh.scale.z=sz0;mesh.updateMatrixWorld(true);
+ $("#title").textContent="🧩 "+ev.name.toUpperCase()+" · "+n.label;const lb=ev.kg*2.2046;
+ $("#stats").innerHTML=`${(sz.x/1000).toFixed(2)} × ${(sz.y/1000).toFixed(2)} × ${(sz.z/1000).toFixed(2)} m · ${(PJ.MATP[n.p.mat]||{}).n||n.p.mat}<br>${fmtMass(ev.kg)} (${Math.round(lb).toLocaleString()} lb) · ≈${fmtUSD(ev.cost)} materials &amp; parts${ev.watts?` · ${Math.round(ev.watts).toLocaleString()} W peak`:""}<br>${ev.parts.length} line items · ${ev.parts.reduce((a,r)=>a+r.q,0)} pieces`;
+ let h="";const ms=PJ.megaSummary(ev);
+ if(ms){h+=`<div class="bs"><b>System breakdown</b>${ms.map(l=>`<div class="iss info">▣ ${esc(l)}</div>`).join("")}</div>`;
+  const R=ev.rep;h+=`<div class="bs"><b>Self-replication estimate</b><div class="iss info">Makes in-house (print + fab): <b>${R.pctDesigns}%</b> of unique part designs · <b>${R.pctCount}%</b> of pieces · <b>${R.pctCost}%</b> of cost. Bought: ${R.count.source} pieces (${fmtUSD(R.cost.source)}) — motors, chips, bearings, batteries.</div></div>`;
+  if(ev.roadmap)h+=`<details class="bs" open><summary><b>Staged roadmap</b></summary>${ev.roadmap.map(([a,b])=>`<div class="iss info"><b>${esc(a)}</b> — ${esc(b)}</div>`).join("")}</details>`;}
+ if(ev.notes.length)h+=`<div class="bs"><b>Engineering notes</b>${ev.notes.map(l=>`<div class="iss info">${esc(l)}</div>`).join("")}</div>`;
+ const bySub=ms?[...ev.subs.keys()]:[null];
+ h+=`<details class="bs" open><summary><b>Cut / parts list</b> (${ev.parts.length})</summary><table class="kt cut"><tr><th>Part</th><th>Qty</th><th>Material</th><th>Size</th><th>kg</th><th>$</th>${ms?"<th>Make</th>":""}</tr>${bySub.map(sb=>(sb?`<tr><td colspan="7" class="sub">${esc(sb)}</td></tr>`:"")+ev.parts.filter(r=>!sb||r.sub==sb).map(r=>`<tr><td>${esc(r.n)}</td><td>${r.q}</td><td>${esc(r.m)}</td><td>${esc(r.dims)}</td><td>${r.kg.toFixed(r.kg<1?2:1)}</td><td>${Math.round(r.cost)}</td>${ms?`<td>${r.rep}</td>`:""}</tr>`).join("")).join("")}</table></details>`;
+ h+=`<details class="bs"><summary><b>Build steps</b></summary><ol>${ev.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></details>`;
+ h+=`<details class="bs" open><summary><b>Safety</b></summary>${ev.safety.map(s=>`<div class="iss med">⚠ ${esc(s)}</div>`).join("")}</details>`;
+ $("#issues").innerHTML=h;
+ const o=$("#opts");o.innerHTML="";const acts=[["⬆ Bigger","make it bigger"],["⬇ Smaller","make it smaller"],...D.mats.filter(m=>m!=n.p.mat).slice(0,3).map(m=>["◧ "+(PJ.MATP[m]||{n:m}).n,"use "+({pt:"pressure treated",alu:"aluminum",ply:"plywood",pla:"pla",petg:"petg",abs:"abs",wood:"wood",steel:"steel",cedar:"cedar",carbon:"carbon",acrylic:"acrylic",mdf:"plywood"}[m]||m)])];
+ for(const[lbl,cmd]of acts){const b=document.createElement("button");b.innerHTML=lbl;b.onclick=()=>{const r=projEdit(cmd);if(r)say(r.text,true);};o.append(b);}
+ const pr=$("#params");pr.innerHTML="";for(const k in D.P){const[d,lo,hi,lab,u]=D.P[k];const w=document.createElement("div");w.className="prm";
+  if(u=="b"){w.innerHTML=`<span>${lab}</span><input type="checkbox" ${n.p[k]?"checked":""}>`;w.querySelector("input").onchange=e=>{const p={...n.p,[k]:e.target.checked?1:0};addNode({proj:n.proj,p,label:(e.target.checked?"+ ":"− ")+lab,log:[`${lab} ${e.target.checked?"added":"removed"}`]},n.id);};pr.append(w);continue;}
+  const st=hi-lo>50?1:hi-lo>5?0.5:0.1;w.innerHTML=`<span>${lab}${u&&u!="n"?" ("+u+")":""}</span><input type="number" step="${st}" value="${n.p[k]}"><input type="range" min="${lo}" max="${hi}" step="${st}" value="${n.p[k]}">`;const[num,rng]=w.querySelectorAll("input");
+  const set=v=>{n.p[k]=+v;num.value=v;rng.value=v;evalNode(n);showGeos(n.ev.items);mesh.scale.z=1;mesh.userData.t0=0;renderProj();};rng.onchange=e=>set(e.target.value);num.onchange=e=>set(e.target.value);pr.append(w);}
+ drawTree();}
+function projHints(n){const D=PJ.PROJECTS[n.proj],h=["“make it bigger”"];if(D.size)h.push("“"+D.size.slice(0,2).map(k=>Math.round(n.p[k]*1.25)).join("x")+"”");const b=Object.keys(D.P).filter(k=>D.P[k][4]=="b");for(const k of b.slice(0,2)){const w=D.P[k][5][0].replace(/[?\\()|]/g,"").replace(/s$/,"");h.push(n.p[k]?`“no ${w}”`:`“add ${w}”`);};const m=D.mats.find(m=>m!=n.p.mat);if(m)h.push(`“use ${(PJ.MATP[m]||{n:m}).n.toLowerCase()}”`);return h.join(", ");}
+function projEdit(s){const f=PJ.projFollow(s,cur);if(!f)return null;const from=cur.id;addNode({proj:cur.proj,p:f.p,label:f.label,log:f.log},from);
+ return{html:`<b>G${cur.id} · ${esc(f.label)}</b> (from G${from}) — ${esc(cur.ev.name)}<ul class="why">${f.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>${fmtMass(cur.mass)} · ≈${fmtUSD(cur.cost)}`,text:`${f.label}. ${f.log.slice(0,2).join(". ")}`};}
 function drawTree(){const t=$("#tree");t.classList.remove("muted");const kids=id=>tree.filter(x=>x.parent===id);let h="";
- const walk=(n,d)=>{h+=`<div class="node ${n.id===curId?"cur":""}" data-id="${n.id}" style="margin-left:${d*14}px">${d?"└ ":""}<b>G${n.id}</b> ${n.label} · ${n.name.replace(/_/g," ")} · safety ${(n.safety??L.score(L.inspect(n.name,n.p,n.mat,n.F))).toFixed(1)}</div>`;kids(n.id).forEach(k=>walk(k,d+1));};
+ const walk=(n,d)=>{h+=`<div class="node ${n.id===curId?"cur":""}" data-id="${n.id}" style="margin-left:${d*14}px">${d?"└ ":""}<b>G${n.id}</b> ${n.label} · ${n.proj?esc(n.name||PJ.PROJECTS[n.proj].name):n.name.replace(/_/g," ")+" · safety "+(n.safety??L.score(L.inspect(n.name,n.p,n.mat,n.F))).toFixed(1)}</div>`;kids(n.id).forEach(k=>walk(k,d+1));};
  tree.filter(x=>x.parent===null).forEach(r=>walk(r,0));t.innerHTML=h;t.querySelectorAll(".node").forEach(e=>e.onclick=()=>select(+e.dataset.id));}
 function buildAsm(k){const A=L.ASSEMBLIES[k];asm=k;cur=null;const parts=A.build();showGeos(parts);mesh.scale.z=1;mesh.userData.t0=0;$("#tAnim").hidden=false;anim=true;$("#tAnim").classList.add("on");
  $("#title").textContent="🔗 "+A.name.toUpperCase();$("#stats").innerHTML=`${parts.length} parts · joint: ${A.joint}<br>${parts.map(p=>p.name).join(" · ")}`;
@@ -94,10 +123,14 @@ async function ask(q){q=(q||$("#aq").value).trim();if(!q)return;$("#aq").value="
  const steps=q.split(/\s*(?:,?\s*then\s+|;\s*|\band then\b)\s*/i).filter(Boolean);const out=[];
  for(const s of steps){const r=await one(s);if(r&&r.html){say(r.text);$("#answer").innerHTML=r.html;return;}if(r)out.push(r);}if(out.length)say(out.join("\n"));}
 async function one(s){const t=s.toLowerCase();
+ if(cur&&cur.proj&&!asm){const pr=PJ.route(s,LEARN);if(!pr||pr.id==cur.proj&&!/^(please\s+)?(make|build|design|create)\s+(me\s+)?(an?|the)\s/.test(t)){const r=projEdit(s);if(r)return r;}}
+ const bq=/^(?:please\s+)?(?:make|build|design|forge|create|draw|plan|i need|i want|can you (?:make|build|design|plan)|give me|how (?:do|would|can) (?:i|you) (?:build|make))\b/.test(t)||/\bthink big\b/.test(t);
+ if(bq){const pr=PJ.route(s,LEARN);if(pr){if(mode!="projects"&&$("#lab").hidden)enter("projects");$("#q").value=s;const r=forge(s,true);if(r&&r.proj)return{html:`<b>Built G${cur.id}: ${esc(cur.ev.name)}</b><ul class="why">${cur.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><small>Try: ${esc(projHints(cur))}.</small>`,text:`Built the ${cur.ev.name}. ${fmtMass(cur.mass)}, about ${fmtUSD(cur.cost)}.`};}}
  const bm=t.match(/^(?:please\s+)?(?:make|build|design|forge|create|draw|print|i need|i want|can you (?:make|build|design)|give me|how about)\b\s*(?:me\s+)?/);
  if(bm&&!(cur&&B.isFollowup(t)&&!B.pickPart(t))){const txt=s.slice(bm[0].length).replace(/^(an?|the)\s+/i,"");const pl=B.plan(txt);if(!pl)return`I can't build “${txt}” from the library yet. Ask “what parts can it make” for the list.`;if(mode=="assembly")enter(L.PARTS[pl.name].mode||"object");$("#q").value=txt;forge(txt,true);
   return{html:`<b>Built G${cur.id}: ${pl.name.replace(/_/g," ")}</b><ul class="why">${pl.why.map(l=>`<li>${esc(l)}</li>`).join("")}</ul><small>Try: “make it stronger”, “now in aluminum”, “twice as long”, “thinner”.</small>`,text:`Built a ${pl.name.replace(/_/g," ")}. ${pl.why.at(-1)}`};}
- if(cur&&!asm&&B.isFollowup(t)){const f=B.followup(s,cur);if(f){const from=cur.id;addNode({name:cur.name,p:f.p,mat:f.mat,F:f.F,label:f.label,log:f.log},from);return{html:`<b>G${cur.id} · ${esc(f.label)}</b> (from G${from})<ul class="why">${f.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>Safety ${cur.safety.toFixed(1)}/3 · ${fmtMass(cur.mass)}`,text:`${f.label}. ${f.log.slice(0,2).join(". ")}`};}}
+ if(cur&&cur.proj&&!asm&&/^(now |also |and |then )?(make it|use|switch|change|add|remove|no |without|with|in |bigger|smaller|longer|shorter|wider|taller|double|half)/.test(t)){const D=PJ.PROJECTS[cur.proj];return`No change made to ${D.name}: it already has that, or I can't change that yet. I can edit: ${Object.values(D.P).map(P=>P[3].toLowerCase()).join(", ")}; materials: ${D.mats.map(m=>(PJ.MATP[m]||{n:m}).n).join(", ")}.`;}
+ if(cur&&!cur.proj&&!asm&&B.isFollowup(t)){const f=B.followup(s,cur);if(f){const from=cur.id;addNode({name:cur.name,p:f.p,mat:f.mat,F:f.F,label:f.label,log:f.log},from);return{html:`<b>G${cur.id} · ${esc(f.label)}</b> (from G${from})<ul class="why">${f.log.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>Safety ${cur.safety.toFixed(1)}/3 · ${fmtMass(cur.mass)}`,text:`${f.label}. ${f.log.slice(0,2).join(". ")}`};}}
  if(/\b(what|which) (parts|things|shapes|designs)\b.*\b(make|build|design|do)\b|\bparts? (list|library)\b|\blist (of )?parts\b/.test(t))return"I can build: "+Object.keys(L.PARTS).map(n=>n.replace(/_/g," ")).join(", ")+". Describe one in plain words, like “a shelf bracket that holds 50 lb, 8 inches deep, aluminum”.";
  if(/\b(export|download)\b.*\bstl\b|^export\b/.test(t)){exportSTL();return"Exported STL.";}
  if(/^(inspect|check|what'?s wrong|weak)/.test(t)){if(!cur)return"Nothing to inspect yet.";const I=cur.issues.filter(i=>i.sev!="info");return I.length?I.map((i,k)=>`${k+1}. ${i.note}`).join(" "):"No weak points at this load.";}
@@ -119,9 +152,10 @@ const teachBar=(q,ok)=>`<div class="teach">${ok?`<button class="tb" data-wrong="
 $("#answer").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.teach||b.dataset.wrong)openTeach(lastQ);
  if(b.dataset.k){const E=kb2().find(x=>kkey(x)==b.dataset.k);if(E){$("#answer").innerHTML=`${esc(E.a)}<div class="src">— ${esc(E.d)}: ${esc(E.t)}</div><div class="teach"><button class="tb" data-remember="${esc(E.t)}">✓ Yes, that's what I meant (remember it)</button></div>`;$("#answer").dataset.k=b.dataset.k;}}
  if(b.dataset.remember){LEARN.aliases.push({q:lastQ,k:$("#answer").dataset.k});saveLearn();b.textContent="✓ Learned. I'll answer that next time.";b.disabled=true;}});
-function openTeach(q){$("#tQ").value=q;$("#tTopic").value="";$("#tAns").value="";$("#tMsg").textContent="";const dl=$("#tList");if(!dl.children.length||dl.children.length!=kb2().length)dl.innerHTML=kb2().map(e=>`<option value="${esc(e.t)}">${esc(e.d)}</option>`).join("");renderLearned();$("#teachDlg").showModal();}
+function openTeach(q){$("#tQ").value=q;$("#tTopic").value="";$("#tAns").value="";$("#tMsg").textContent="";const dl=$("#tList");if(!dl.children.length||dl.children.length!=kb2().length)dl.innerHTML=kb2().map(e=>`<option value="${esc(e.t)}">${esc(e.d)}</option>`).join("")+Object.values(PJ.PROJECTS).map(D=>`<option value="${esc(D.name)}">Project</option>`).join("");renderLearned();$("#teachDlg").showModal();}
 $("#tSave").onclick=()=>{const q=$("#tQ").value.trim(),tp=$("#tTopic").value.trim(),an=$("#tAns").value.trim();if(!q)return;
- if(tp&&!an){const E=kb2().find(e=>e.t.toLowerCase()==tp.toLowerCase());if(!E){$("#tMsg").textContent="Pick a topic from the list, or write the answer below.";return;}LEARN.aliases=LEARN.aliases.filter(a=>a.q!=q);LEARN.aliases.push({q,k:kkey(E)});}
+ if(tp&&!an&&PJ.projectByName(tp)){const D=PJ.projectByName(tp);LEARN.aliases=LEARN.aliases.filter(a=>a.q!=q);LEARN.aliases.push({q,k:"proj|"+D.id});}
+ else if(tp&&!an){const E=kb2().find(e=>e.t.toLowerCase()==tp.toLowerCase());if(!E){$("#tMsg").textContent="Pick a topic from the list, or write the answer below.";return;}LEARN.aliases=LEARN.aliases.filter(a=>a.q!=q);LEARN.aliases.push({q,k:kkey(E)});}
  else if(an){LEARN.entries=LEARN.entries.filter(e=>e.t!=q);LEARN.entries.push({t:q,g:q,a:an});}else{$("#tMsg").textContent="Choose the right topic or type the answer.";return;}
  saveLearn();$("#teachDlg").close();ask(q);};
 function renderLearned(){const n=LEARN.aliases.length+LEARN.entries.length;$("#tCount").textContent=n?`${n} thing${n==1?"":"s"} learned in this browser`:"Nothing learned yet";
@@ -145,5 +179,5 @@ $("#aiBtn").onclick=()=>{$("#aiProv").value=localStorage.hf_prov||"xai";$("#aiKe
 $("#aiSave").onclick=()=>{const k=$("#aiKey").value.trim();if(k){localStorage.hf_key=k;localStorage.hf_prov=$("#aiProv").value;}aiLbl();$("#aiDlg").close();};
 $("#aiClear").onclick=()=>{delete localStorage.hf_key;aiLbl();$("#aiDlg").close();};$("#aiClose").onclick=()=>$("#aiDlg").close();
 $("#helpBtn").onclick=()=>$("#helpDlg").showModal();$("#helpClose").onclick=()=>$("#helpDlg").close();
-if(location.hash.length>1){const m=location.hash.slice(1);if(["object","bridge","roof","assembly","invent"].includes(m))enter(m);}
-window.HF={ask,forge,tree:()=>tree,cur:()=>cur,sem:()=>SEM.status(),learned:()=>LEARN};
+if(location.hash.length>1){const m=location.hash.slice(1);if(["object","bridge","roof","assembly","invent","projects"].includes(m))enter(m);}
+window.HF={PJ,ask,forge,tree:()=>tree,cur:()=>cur,sem:()=>SEM.status(),learned:()=>LEARN};

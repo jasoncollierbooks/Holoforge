@@ -1,0 +1,12 @@
+[["7x14 work trailer",[["make it 7x16","p.L==16&&p.W==7"],["no generator","p.gen==0"],["make it bigger","p.L>o.L"],["no ladder rack","p.ladder==0"]]],
+["pirate ship",[["make it bigger","p.L>o.L"],["smaller","p.L<o.L"],["in wood","p.mat=='wood'"]]],
+["10x12 shed",[["make it 12x16","p.W==12&&p.L==16"],["add a loft","p.loft==1"],["no ramp","p.ramp==0"],["taller","p.H>o.H"]]],
+["workbench",[["make it longer","p.L>o.L"],["in steel","p.mat=='steel'"],["add casters","p.casters==1"],["no vise","p.vise==0"]]],
+["12x16 deck",[["without railing","p.rail==0"],["use cedar","p.mat=='cedar'"],["make it wider","p.W>o.W"]]],
+["4wd robot rover",[["add lidar","p.lidar==1"],["6 wheels","p.wheels==6"],["in aluminum","p.mat=='alu'"]]],
+["von neumann animatronic",[["make it taller","p.H>o.H"],["without the fab cell","p.cell==0"],["add walking legs","p.legs==1"],["no skin","p.skin==0"]]],
+["v8 engine",[["twice as big","Object.keys(p).some(k=>typeof p[k]=='number'&&p[k]>o[k])"],["in aluminum","p.mat=='alu'"]]],
+["chicken coop",[["12 hens","p.hens==12"],["no run","p.run==0"]]],
+["go kart",[["electric","p.electric==1"],["make it wider","p.W>o.W"]]],
+["tiny house",[["make it 8.5x28","p.L==28"],["no solar","p.solar==0"]]],
+["raised cedar bed 4x8",[["make it 3x6","p.W==3&&p.L==6"],["add a trellis","p.trellis==1"],["pressure treated","p.mat=='pt'"]]]]

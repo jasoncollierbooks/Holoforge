@@ -71,8 +71,8 @@ export function evalProject(id,p){const D=PROJECTS[id],q=toMM(D,p),comps=D.build
 const STOP=new Set("the a an it its my of to and with for in on at by make made making set change put now also please more less some all every each one this that than as be is are bigger larger smaller taller higher shorter longer wider narrower deeper thicker thinner lower inch inches in ft foot feet mm cm m deep wide tall high long thick add remove drop delete no without swap replace paint color colour use them those twice half double".split(" "));
 const stem=w=>w.replace(/(ies)$/,"y").replace(/(ves)$/,"f").replace(/(ses|xes|ches|shes)$/,m=>m.slice(0,-2)).replace(/([^s])s$/,"$1");
 const words=s=>s.toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(Boolean);
-function partNames(D,p){try{return[...new Set(D.build(toMM(D,p),p).flat().filter(Boolean).map(c=>c.n))];}catch{return[];}}
-function nounHits(D,p,t){const names=partNames(D,p),ns=names.map(n=>words(n).map(stem));const out=[];for(const w of words(t)){if(STOP.has(w)||/^\d/.test(w)||w.length<3)continue;const sw=stem(w);if(ns.some(a=>a.includes(sw)))out.push(sw);}return[...new Set(out)];}
+export function partNames(D,p){try{return[...new Set(D.build(toMM(D,p),p).flat().filter(Boolean).map(c=>c.n))];}catch{return[];}}
+export function nounHits(D,p,t){const names=partNames(D,p),ns=names.map(n=>words(n).map(stem));const out=[];for(const w of words(t)){if(STOP.has(w)||/^\d/.test(w)||w.length<3)continue;const sw=stem(w);if(ns.some(a=>a.includes(sw)))out.push(sw);}return[...new Set(out)];}
 function paramFor(D,noun,kind){for(const k in D.P){const P=D.P[k];if(kind=="b"&&P[4]!="b")continue;if(kind=="n"&&P[4]!="n")continue;if(kind=="len"&&!UF[P[4]])continue;const hay=[P[3],...(P[5]||[])].join(" ").toLowerCase();if(words(hay).map(stem).includes(noun)||hay.includes(noun))return k;}return null;}
 function partOverride(c,P){const ln=words(c.n).map(stem);for(const w in P){if(!ln.includes(w))continue;const o=P[w];if(!c.d)continue;c.d=[...c.d];
   const ax=a=>c.s=="box"?(a=="h"?2:a=="l"?(c.d[0]>=c.d[1]?0:1):(c.d[0]>=c.d[1]?1:0)):c.s=="cyl"?(a=="h"||a=="l"?2:0):c.s=="bar"?(a=="h"||a=="l"?2:0):0;

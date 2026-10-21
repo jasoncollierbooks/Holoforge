@@ -1,0 +1,3 @@
+[["pirate ship",[["make the mast taller","p._part&&p._part.mast&&p._part.mast.sh>1"],["add 2 cannons","p.guns==o.guns+2"],["paint hull red","p._paint&&p._paint.hull=='red'"],["make the sails bigger","p._part.sail"],["remove the flag","p.flag==0"]]],
+["7x14 work trailer",[["swap the bench for drawers","p.bench==0&&p.drawers==1"],["remove the ladder rack","p.ladder==0"],["shelves 18 inches deep","Math.abs(p._part.shelf.vw-457.2)<1"]]],
+["10x12 shed",[["make the door wider","p._part.door"],["paint the siding blue","p._paint.siding=='blue'"]]]]

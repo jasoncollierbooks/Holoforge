@@ -1,40 +1,50 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOLO//FORGE — text to design</title><meta name="description" content="Type what you want. Get a 3D part, an engineer's inspection, and better versions. Runs in your browser.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 29 9v14L16 30 3 23V9z' fill='none' stroke='%2337e0ff' stroke-width='2.5'/></svg>">
-<link rel="stylesheet" href="style.css">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml"><link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#041322">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ui.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head><body>
 <div id="bg"></div>
 <section id="start">
- <div class="brand"><span class="hex">⬡</span> HOLO<b>//</b>FORGE</div>
- <p class="tag">Type what you want. Get a 3D design, an engineer's inspection, and better versions.</p>
- <div class="modes">
-  <button data-mode="object"><i>⚙</i><b>Physical part</b><small>brackets, gears, boxes, plates</small></button>
-  <button data-mode="bridge"><i>⟁</i><b>Bridges &amp; buildings</b><small>truss spans, frames</small></button>
-  <button data-mode="roof"><i>⌂</i><b>Roofs</b><small>gable roofs, rafters</small></button>
-  <button data-mode="assembly"><i>🔗</i><b>Assemblies</b><small>hinges, gear pairs, sliders</small></button>
-  <button data-mode="projects"><i>🧩</i><b>Projects</b><small>pirate ship, engines, work trailer, 70+ builds, mega systems</small></button>
-  <button data-mode="invent"><i>✦</i><b>Invent</b><small>describe an idea</small></button>
-  <button data-mode="code" class="soon"><i>&lt;/&gt;</i><b>Code</b><small>coming to the web version</small></button>
+ <div class="hero">
+  <div class="brand"><span class="logo" data-i="logo"></span>HOLO<b>//</b>FORGE</div>
+  <p class="tag">Describe it, sketch it, or pick a project. Get a 3D design, an engineer's inspection, a parts list — and better versions.</p>
+  <form id="heroForm" class="heroq" autocomplete="off"><span data-i="invent"></span><input id="heroQ" placeholder="What do you want to make?  e.g. a 10x12 shed with a loft" aria-label="What do you want to make?"><button type="submit" class="primary"><span data-i="send"></span>Make it</button><div id="heroAc" class="ac" hidden></div></form>
+  <div class="heroChips"><button data-try="build a pirate ship">Pirate ship</button><button data-try="build a 10x12 shed">10×12 shed</button><button data-try="a stand for two monitors">Monitor stand</button><button data-try="L bracket that holds 20 kg">L bracket</button><button data-try="build a robot dog">Robot dog</button></div>
  </div>
- <p class="foot">Runs entirely in your browser · no account · works without AI</p>
+ <div class="modes">
+  <button data-mode="projects" class="feat"><span class="mi" data-i="projects"></span><b>Projects</b><small>166 ready builds — boats, sheds, robots, vehicles, mega systems</small></button>
+  <button data-mode="object"><span class="mi" data-i="part"></span><b>Physical part</b><small>brackets, gears, boxes, plates</small></button>
+  <button data-mode="sketch"><span class="mi" data-i="sketch"></span><b>Sketch → 3D</b><small>draw a profile, extrude or revolve it</small></button>
+  <button data-mode="bridge"><span class="mi" data-i="bridge"></span><b>Bridges &amp; frames</b><small>truss spans, buildings</small></button>
+  <button data-mode="roof"><span class="mi" data-i="roof"></span><b>Roofs</b><small>gable roofs, rafters</small></button>
+  <button data-mode="assembly"><span class="mi" data-i="assembly"></span><b>Assemblies</b><small>hinges, gear pairs, sliders</small></button>
+  <button data-mode="invent"><span class="mi" data-i="invent"></span><b>Invent</b><small>describe a new idea</small></button>
+  <button data-mode="code" class="soon"><span class="mi" data-i="code"></span><b>Code</b><small>coming to the web version</small></button>
+ </div>
+ <p class="foot"><span>Runs in your browser</span><span>No account</span><span>Works offline-first, AI optional</span></p>
 </section>
 <main id="lab" hidden>
- <header><button id="home" title="Change mode">⬡ HOLO<b>//</b>FORGE</button><span id="modeName"></span><span class="sp"></span>
-  <button id="semBtn" class="ghost" title="On-device meaning matcher (free, runs in your browser)">🧠 Meaning</button><button id="learnBtn" class="ghost" title="What the assistant learned from you">✎ Learned 0</button><button id="aiBtn" class="ghost">AI: off</button><button id="helpBtn" class="ghost">?</button></header>
- <div id="prompt"><input id="q" autocomplete="off" placeholder="Describe a part… e.g. L bracket 40 mm legs, 3 mm thick, holds 5 kg"><button id="go">FORGE</button></div>
+ <header><button id="home" title="Home" aria-label="Home"><span data-i="logo"></span>HOLO<b>//</b>FORGE</button><span id="modeName"></span><span class="sp"></span>
+  <button id="sketchBtn" class="ghost" title="Sketch a profile and turn it into 3D"><span data-i="sketch"></span><em>Sketch</em></button><button id="semBtn" class="ghost" title="On-device meaning matcher (free, runs in your browser)"><span data-i="brain"></span><em>Meaning</em></button><button id="learnBtn" class="ghost" title="What the assistant learned from you">Learned 0</button><button id="aiBtn" class="ghost" title="Optional bring-your-own-key AI">AI: off</button><button id="helpBtn" class="ghost icon" title="Help" aria-label="Help"><span data-i="help"></span></button></header>
+ <div id="prompt"><span class="pi" data-i="invent"></span><input id="q" autocomplete="off" placeholder="Describe a part… e.g. L bracket 40 mm legs, 3 mm thick, holds 5 kg"><button id="go" class="primary">FORGE</button><div id="qAc" class="ac" hidden></div></div>
  <div id="chips"></div>
  <div id="stage"><canvas id="view"></canvas><div id="pins"></div><div id="tip" hidden></div>
   <div id="hud"><div id="title">Pick an example above or type a part</div><div id="stats"></div></div>
-  <div id="tools"><button id="tInspect" class="on">🔍 Inspect</button><button id="tLook">◉ Real</button><button id="tExplode">💥 Explode</button><button id="tWire">◇ Wire</button><button id="tSpin">⟳ Spin</button><button id="tAnim" hidden>▶ Move</button><button id="tStl">⤓ STL</button></div>
+  <div id="tools"><button id="tInspect" class="on" title="Inspection pins"><span data-i="inspect"></span><em>Inspect</em></button><button id="tLook" title="Holo / realistic look"><span data-i="look"></span><em>Real</em></button><button id="tExplode" title="Exploded view"><span data-i="explode"></span><em>Explode</em></button><button id="tWire" title="Wireframe"><span data-i="wire"></span><em>Wire</em></button><button id="tSpin" title="Auto-rotate"><span data-i="spin"></span><em>Spin</em></button><button id="tAnim" hidden title="Animate"><span data-i="play"></span><em>Move</em></button><button id="tStl" title="Download STL"><span data-i="stl"></span><em>STL</em></button></div>
+  <div id="empty" class="empty"><span data-i="projects"></span><h4>Nothing on the bench yet</h4><p>Pick an example above, type what you want, or <button class="link" data-sketch>sketch a profile</button>.</p></div>
+  <div id="loading" class="loading" hidden><div class="spin"></div><span>Forging…</span></div>
+  <div id="hint" class="hint" hidden></div>
  </div>
  <aside id="side">
-  <section><h3>Engineer inspection</h3><div id="issues" class="muted">Nothing built yet.</div></section>
+  <section><h3>Engineer inspection</h3><div id="issues" class="muted emptyS">Build something to see stress checks, a cut list and build steps here.</div></section>
   <section><h3>Make it…</h3><div id="opts"></div></section>
   <section><h3>Dimensions</h3><div id="params"></div></section>
   <section><h3>Generations</h3><div id="tree" class="muted">Your design history appears here. Click any version to go back; new versions branch from it.</div></section>
  </aside>
- <footer id="assist"><button id="mic" title="Talk">🎙</button><input id="aq" placeholder="Lab Assistant — ask anything: “what's a good wall for PETG?”, “convert 3/4 in to mm”, “make a gear then stronger then export”"><button id="ask">Ask</button><label class="spk"><input type="checkbox" id="speak" checked> 🔊</label>
+ <footer id="assist"><button id="mic" title="Talk" aria-label="Talk"><span data-i="mic"></span></button><div class="aqw"><input id="aq" autocomplete="off" placeholder="Lab Assistant — ask, build or edit: “define kerf”, “make the mast taller”, “what about steel?”"><div id="aAc" class="ac up" hidden></div></div><button id="ask" class="primary">Ask</button><label class="spk" title="Speak answers"><input type="checkbox" id="speak" checked><span data-i="speaker"></span></label>
   <div id="answer"></div></footer>
 </main>
 <dialog id="aiDlg"><h3>Optional AI (bring your own key)</h3><p>HOLO//FORGE works fully without AI. If you want, paste your own xAI or OpenAI key. It is stored <b>only in this browser</b> (localStorage) and sent only to the provider you pick.</p>
@@ -49,5 +59,18 @@
  <div class="row"><button id="tSave">Save &amp; use it</button><button id="tExport" class="ghost">Export</button><button id="tImport" class="ghost">Import</button><input type="file" id="tFile" accept=".json" hidden><button id="tClose" class="ghost">Close</button></div>
  <h4 id="tCount"></h4><div id="tLearned" class="learned"></div></dialog>
 <dialog id="helpDlg"><h3>How to use</h3><ol><li>Type a part (or tap an example chip) and press <b>FORGE</b>.</li><li>Red/amber pins on the model are weak points — read them in <b>Engineer inspection</b>.</li><li>Tap <b>Lighter / Stronger / Cheaper</b> to make a new generation. Every version is kept in <b>Generations</b>; click one to go back and branch.</li><li>Drag sliders in <b>Dimensions</b> to tweak.</li><li><b>⤓ STL</b> downloads a file for 3D printing.</li><li>Ask the <b>Lab Assistant</b> anything, by typing or 🎙. Or just describe what you need: “a shelf bracket that holds 50 lb, 8 inches deep, aluminum”, then “make it stronger”, “now in steel”, “twice as long”.</li><li>Wrong or missing answer? Press <b>✎ Teach it</b>. 🧠 Meaning loads a small free model into your browser so it understands rephrased questions.</li></ol><p class="muted">Results are quick hand-calc estimates, not a licensed engineer's sign-off.</p><div class="row"><button id="helpClose">Got it</button></div></dialog>
+<dialog id="sketchDlg" class="sketch"><div class="skHead"><h3><span data-i="sketch"></span> Sketch → 3D</h3><span class="sp"></span><button class="ghost icon" id="skClose" aria-label="Close"><span data-i="close"></span></button></div>
+ <div class="skBody"><div class="skPads"><div class="skPad"><canvas id="skCanvas" width="640" height="480"></canvas><div class="skLbl" id="skLbl">Profile (side view)</div></div><div class="skPad" id="skPad2" hidden><canvas id="skCanvas2" width="640" height="480"></canvas><div class="skLbl">Front view</div></div></div>
+ <div class="skSide">
+  <div class="seg" id="skOp"><button data-op="extrude" class="on"><span data-i="extrude"></span>Extrude</button><button data-op="revolve"><span data-i="revolve"></span>Revolve</button><button data-op="loft"><span data-i="loft"></span>Loft</button><button data-op="views"><span data-i="wire"></span>Side+front</button></div>
+  <label class="tg"><input type="checkbox" id="skSnap" checked> <span data-i="straight"></span>Straighten &amp; snap</label>
+  <label class="tg"><input type="checkbox" id="skSym"> <span data-i="symmetry"></span>Mirror symmetry</label>
+  <label>Width of drawing <span class="u"><input id="skW" type="number" value="120" min="1"> mm</span></label>
+  <label id="skDL">Depth / thickness <span class="u"><input id="skD" type="number" value="20" min="1"> mm</span></label>
+  <label>Material <select id="skMat"><option value="pla">PLA (3D print)</option><option value="petg">PETG</option><option value="aluminum">Aluminum</option><option value="steel">Steel</option><option value="wood">Wood</option></select></label>
+  <div class="skInfo" id="skInfo">Draw a closed outline. Pressure from a pen makes thicker strokes (display only).</div>
+  <div class="row"><button class="ghost" id="skUndo"><span data-i="undo"></span>Undo</button><button class="ghost" id="skClear"><span data-i="trash"></span>Clear</button></div>
+  <button class="primary" id="skMake"><span data-i="check"></span>Make 3D part</button>
+ </div></div></dialog>
 <script type="module" src="app.js"></script>
 </body></html>

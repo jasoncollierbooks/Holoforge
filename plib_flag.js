@@ -1,4 +1,5 @@
 // Flagship projects: pirate ship, engines, work-trailer build-out.
+import * as SH from './shapes.js';
 import * as THREE from 'three';import {proj,B,C,S,HW,G,bar,rep,AT} from './projects.js';const T=THREE,PI=Math.PI;
 // ---------------- pirate ship (display model) ----------------
 function hullGeo(L,W,H,inset=0,depth){const s=new T.Shape(),w=W/2-inset,l=L/2-inset;s.moveTo(-l,-w*0.78);s.quadraticCurveTo(-l*0.2,-w*1.05,l*0.45,-w*0.8);s.quadraticCurveTo(l*0.9,-w*0.35,l,0);s.quadraticCurveTo(l*0.9,w*0.35,l*0.45,w*0.8);s.quadraticCurveTo(-l*0.2,w*1.05,-l,w*0.78);s.lineTo(-l,-w*0.78);
@@ -7,7 +8,7 @@ proj("pirate_ship",{name:"Pirate ship (display model)",cat:"Toys & models",unit:
  re:[/\b(pirate|galleon|tall|sailing|wooden|model|viking|caribbean|black pearl|buccaneer|privateer|corsair|frigate|brigantine) ship\b/,/\b(buccaneer|privateer|corsair)s?\b/,/\bpirate (boat|galleon|vessel)\b/,/\bgalleon\b/,/\bship model\b/],kw:"pirate ship, galleon, sailing ship model, tall ship, display boat, masts sails cannons",
  P:{L:[600,200,2000,"Hull length","mm",["long","length"]],masts:[3,1,4,"Masts","n",["masts?"]],guns:[6,0,16,"Cannons per side","n",["cannons? per side","cannons?","guns"]],sails:[1,0,1,"Sails","b",["sails?"]],flag:[1,0,1,"Jolly Roger flag","b",["flags?","jolly roger"]],castle:[1,0,1,"Stern castle","b",["stern castle","castle","cabin"]],stand:[1,0,1,"Display stand","b",["stand","cradle"]]},roles:{l:"L"},
  build:(q,p)=>{const L=q.L,W=L*0.28,H=L*0.16,m=p.mat,o=[];const hz=L*0.06*q.stand;
-  o.push(G("Hull (print in sections, 3 mm wall)",m,hullGeo(L,W,H).translate(0,0,hz),{t:3,spec:`${Math.round(L)} × ${Math.round(W)} × ${Math.round(H)} mm hull`,sub:"Hull"}));
+  o.push(G("Hull (print in sections, 3 mm wall)",m,SH.hull(L,W,H*0.98,{n:2.2,transom:0.8,rocker:0.18}).translate(0,0,hz),{t:3,spec:`${Math.round(L)} × ${Math.round(W)} × ${Math.round(H)} mm hull`,sub:"Hull"}));
   o.push(G("Main deck",p.mat=="pla"?"wood":"wood",hullGeo(L,W,H,L*0.01,3).translate(0,0,hz+H*0.92),{spec:"deck plate, 3 mm",sub:"Hull"}));
   o.push(B("Keel","wood",L*0.92,W*0.04,H*0.18,0,0,hz-H*0.05,{sub:"Hull"}));
   if(q.castle)o.push(B("Stern castle",m,L*0.2,W*0.72,H*0.5,-L*0.4,0,hz+H*1.15,{t:2,sub:"Hull"}),B("Forecastle",m,L*0.12,W*0.5,H*0.25,L*0.33,0,hz+H*1.05,{t:2,sub:"Hull"}));

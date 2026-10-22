@@ -2,6 +2,7 @@
 // Pure data + three.js geometry, no DOM. Units inside builds: mm. Params carry their own display unit (ft / in / mm / n / b).
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import * as SH from './shapes.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {search,toks} from './brain.js';
 const T=THREE,PI=Math.PI;
@@ -30,7 +31,12 @@ const RB=(w,d,h)=>{const m=Math.min(w,d,h);return m>4?new RoundedBoxGeometry(w,d
 function rectTube(w,h,L,t){const s=new T.Shape();s.moveTo(-w/2,-h/2);s.lineTo(w/2,-h/2);s.lineTo(w/2,h/2);s.lineTo(-w/2,h/2);s.closePath();const i=new T.Path(),a=w/2-t,b=h/2-t;i.moveTo(-a,-b);i.lineTo(-a,b);i.lineTo(a,b);i.lineTo(a,-b);i.closePath();s.holes.push(i);const g=new T.ExtrudeGeometry(s,{depth:L,bevelEnabled:false});g.translate(0,0,-L/2);return g;}
 function pipe(r1,r2,h,t,seg){const pts=[new T.Vector2(r1-t,-h/2),new T.Vector2(r1,-h/2),new T.Vector2(r2,h/2),new T.Vector2(Math.max(0.01,r2-t),h/2),new T.Vector2(r1-t,-h/2)];const g=new T.LatheGeometry(pts,seg);g.rotateX(PI/2);return g;}
 function geoOf(c){let g;c._hollow=false;const seg=c.seg||(c.d&&Math.max(c.d[0],c.d[1]||0)>60?48:32);
- if(c.s=="box")g=RB(...c.d);
+ const nm=c.n||"";
+ if(c.s=="cyl"&&!c.t&&/\b(wheel|tire|tyre|caster)\b/i.test(nm)&&c.d[0]>8&&c.d[2]<c.d[0]*1.6){g=SH.wheel(c.d[0],c.d[2]);if(c.ax=="x")g.rotateZ(PI/2);else if(!c.ax)g.rotateX(PI/2);}
+ else if(c.s=="cyl"&&/fuselage/i.test(nm)&&c.ax=="x"){g=SH.fuselage(c.d[2],c.d[0]);}
+ else if(c.s=="box"&&/\bleg\b/i.test(nm)&&c.d[2]>3*Math.max(c.d[0],c.d[1])&&!c.t){g=SH.leg(Math.min(c.d[0],c.d[1]),c.d[2],{sq:true});g.translate(0,0,-c.d[2]/2);}
+ else if(c.s=="box"&&/\b(wing|stabili[sz]er)\b/i.test(nm)&&c.d[2]<0.25*c.d[0]&&c.d[1]>2*c.d[0]){g=SH.wing(c.d[0],c.d[1],{t:Math.min(0.18,Math.max(0.06,c.d[2]/c.d[0]))});}
+ else if(c.s=="box")g=RB(...c.d);
  else if(c.s=="cyl"){const t=c.t;if(t&&t<Math.min(c.d[0],c.d[1])*0.8&&c.d[0]>0.5&&c.d[1]>0.5){g=pipe(c.d[0],c.d[1],c.d[2],t,seg);c._hollow=true;}else{g=new T.CylinderGeometry(c.d[1],c.d[0],c.d[2],seg);g.rotateX(PI/2);}if(c.ax=="x")g.rotateY(PI/2);if(c.ax=="y")g.rotateX(PI/2);}
  else if(c.s=="sph")g=new T.SphereGeometry(c.d[0],32,20);
  else if(c.s=="bar"){const[w,h,L]=c.d;g=c.t&&c.t<Math.min(w,h)/2.2?(c._hollow=true,rectTube(w,h,L,c.t)):RB(w,h,L);const q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(...c.b).sub(new T.Vector3(...c.a)).normalize());g.applyQuaternion(q);}

@@ -1,0 +1,12 @@
+fresh1: 29/40 = 72.5%  route 12/20  clarify 4/4  compose 5/5  wsd 2/4  convo 6/7
+  ✗ [route] lattice for my climbing vines → outdoor_kitchen
+  ✗ [route] a tall seat for the breakfast bar → clarify:Dining table|Window seat with storage|Bar stool
+  ✗ [route] little ladder stool for reaching the top cabinet → clarify:Bar stool|Step stool
+  ✗ [route] small craft you row with paddles → clarify:Stitch-and-glue rowboat|Kids' table & chairs|Train / Lego table
+  ✗ [route] six legged crawling robot → clarify:Hexapod walking robot|Robot dog (quadruped)
+  ✗ [route] a raised bed for growing vegetables → none
+  ✗ [route] place to store my garden tools out back → delta_robot
+  ✗ [route] a medieval siege machine that throws rocks → clarify:RC car / rock crawler|Marble run
+  ✗ [wsd] bass → the lowest part of the musical range
+  ✗ [wsd] bit → a small piece or quantity of something
+  ✗ [convo] build a workbench → what about aluminum → workbench 
